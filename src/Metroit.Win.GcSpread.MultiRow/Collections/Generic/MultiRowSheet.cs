@@ -10,7 +10,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 {
     /// <summary>
     /// 1レコードを複数行として扱う機能を提供します。
-    /// null が許容されるセルの場合、アイテムが null 許容型でない場合、セルの見た目とアテムの値が一致しない可能性があります。
+    /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
     /// </summary>
     public class MultiRowSheet<T> : IMultiRowSheet<T>, ISheetState, IDisposable where T : StateKnownMultiRowItemBase, new()
     {
