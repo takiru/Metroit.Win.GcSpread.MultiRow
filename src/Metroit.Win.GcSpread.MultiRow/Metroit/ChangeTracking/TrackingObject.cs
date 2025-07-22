@@ -19,6 +19,8 @@ namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
         [NoTracking]
         public PropertyChangeTracker<TrackingObject<T>> ChangeTracker => _changeTracker;
 
+        public PropertyChangeTracker ChangeTrackerObject => ChangeTracker;
+
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>

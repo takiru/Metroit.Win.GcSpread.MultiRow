@@ -31,7 +31,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// </summary>
         public int RowsPerRecord { get; protected set; }
 
-        private TrackingList<T> _list;
+        private TrackingList2<T> _list;
 
         public IReadOnlyList<T> Rows => _list;
 
@@ -42,7 +42,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <param name="list">取り扱うリスト。</param>
         /// <param name="rowsPerRecord">1レコードの行数。</param>
         /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
+        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList2<T> list, Action<int, Cell> cellSetup = null)
         {
             Sheet = sheet;
             Sheet.CellChanged += Sheet_CellChanged;

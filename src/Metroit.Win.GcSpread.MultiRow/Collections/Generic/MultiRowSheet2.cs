@@ -1,4 +1,5 @@
 ﻿using FarPoint.Win.Spread;
+using Metroit.ChangeTracking;
 using Metroit.Collections.Generic;
 using Metroit.CommunityToolkit.Mvvm;
 using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
@@ -15,7 +16,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
     /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
     /// </summary>
     /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    public class MultiRowSheet2<T> : IDisposable where T : TrackingObservableObjectWithState<T>, new()
+    public class MultiRowSheet2<T> : IDisposable where T : IPropertyChangeTracker, IStateObject, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -107,9 +108,9 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         {
             _actionBeginOperation = ActionBeginOperation.Item;
 
-            if (!_list.Last().ChangeTracker.IsTracking)
+            if (!_list.Last().ChangeTrackerObject.IsTracking)
             {
-                _list.Last().ChangeTracker.Reset();
+                _list.Last().ChangeTrackerObject.Reset();
             }
 
             InitializeItem((T)_list[rowIndex]);
@@ -137,7 +138,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                 _actionBeginOperation = ActionBeginOperation.Item;
                 // 直前で変更されたプロパティの値を実際のセルへ反映する
                 var pi = ((T)_list[rowIndex]).GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
-                    .Where(x => x.Name == ((T)_list[rowIndex]).ChangeTracker.LastTrackingProperty)
+                    .Where(x => x.Name == ((T)_list[rowIndex]).ChangeTrackerObject.LastTrackingProperty)
                     .Single();
                 ReactiveCellValue((T)_list[rowIndex], pi);
             }
@@ -226,7 +227,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
             Func<T, int> getActualStartRowIndex = (T item) =>
             {
-                return actualRows.Where(x => x.Value.Tag == _list.LastAccessItem).First().Index;
+                return actualRows.Where(x => x.Value.Tag == (object)_list.LastAccessItem).First().Index;
             };
 
             if (_list.LastAccessItem.State == ItemState.New)

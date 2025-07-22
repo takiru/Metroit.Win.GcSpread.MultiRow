@@ -216,10 +216,13 @@ namespace Metroit.Collections.Generic
 
 
 
+    public interface ITrackingList
+    {
+        object LastAccessItem { get; }
+    }
 
 
-
-    public class TrackingList2<T> : BindingList<T>, IItemRemovedKnownList<T> where T : TrackingObservableObjectWithState<T>
+    public class TrackingList2<T> : BindingList<T>, IItemRemovedKnownList<T>, ITrackingList where T : IPropertyChangeTracker, IStateObject
     {
         /// <summary>
         /// 削除されたリストデータ。
@@ -256,6 +259,8 @@ namespace Metroit.Collections.Generic
         /// 最後に指示を受けたアイテムを取得します。
         /// </summary>
         public T LastAccessItem { get; private set; } = default(T);
+
+        object ITrackingList.LastAccessItem => LastAccessItem;
 
         /// <summary>
         /// リストが削除された時に必ず走行する。削除されたオブジェクトを把握する。
@@ -379,7 +384,7 @@ namespace Metroit.Collections.Generic
             // 新規行の値を編集して元の値に戻ったとき
             if (item.State == ItemState.NewModified)
             {
-                if (item.ChangeTracker.Entries.Where(x => x.Changed).Count() == 0)
+                if (item.ChangeTrackerObject.Entries.Where(x => x.Changed).Count() == 0)
                 {
                     item.ChangeState(ItemState.New);
                 }
@@ -389,7 +394,7 @@ namespace Metroit.Collections.Generic
             // 無変更行の値を編集して元の値に戻ったとき
             if (item.State == ItemState.Modified)
             {
-                if (item.ChangeTracker.Entries.Where(x => x.Changed).Count() == 0)
+                if (item.ChangeTrackerObject.Entries.Where(x => x.Changed).Count() == 0)
                 {
                     item.ChangeState(ItemState.NotModified);
                 }

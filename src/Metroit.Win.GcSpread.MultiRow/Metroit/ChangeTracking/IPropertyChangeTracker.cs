@@ -2,7 +2,12 @@
 
 namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
 {
-    public interface IPropertyChangeTracker<T> where T : class
+    public interface IPropertyChangeTracker
+    {
+        PropertyChangeTracker ChangeTrackerObject { get; }
+    }
+
+    public interface IPropertyChangeTracker<T> : IPropertyChangeTracker where T : class
     {
         PropertyChangeTracker<T> ChangeTracker { get; }
     }

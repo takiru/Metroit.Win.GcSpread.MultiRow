@@ -6,28 +6,20 @@ using System.Reflection;
 
 namespace Metroit.ChangeTracking
 {
-    /// <summary>
-    /// オブジェクト内にあるプロパティおよびフィールドの変更追跡を提供します。<br/>
-    /// 変更追跡が行われるのは下記をすべて満たすプロパティまたはフィールドです。<br/>
-    ///   - <see cref="NoTrackingAttribute"/> が設定されていないプロパティまたはフィールド<br/>
-    ///   - <see cref="NoTrackings"/> で指定されていないプロパティまたはフィールド<br/>
-    /// プロパティは get アクセサーが必要です。
-    /// </summary>
-    /// <typeparam name="T">変更追跡を行うクラス。</typeparam>
-    public class PropertyChangeTracker<T> where T : class
+    public class PropertyChangeTracker
     {
         /// <summary>
         /// 変更追跡を行うオブジェクト。
         /// </summary>
-        private T Instance { get; }
+        protected object InstanceObject { get; }
 
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>
         /// <param name="instance">変更追跡を行うオブジェクト。</param>
-        public PropertyChangeTracker(T instance)
+        public PropertyChangeTracker(object instance)
         {
-            Instance = instance;
+            InstanceObject = instance;
         }
 
         /// <summary>
@@ -62,13 +54,13 @@ namespace Metroit.ChangeTracking
         {
             _entries.Clear();
 
-            var properties = Instance.GetType().GetProperties(BindingFlags.Instance |
+            var properties = InstanceObject.GetType().GetProperties(BindingFlags.Instance |
                 BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.GetProperty | BindingFlags.GetField)
                 .Where(x => IsTrackingProperty(x));
 
             foreach (var property in properties)
             {
-                _entries.Add(new PropertyChangeEntry(property.Name, property.GetValue(Instance)));
+                _entries.Add(new PropertyChangeEntry(property.Name, property.GetValue(InstanceObject)));
             }
             IsTracking = true;
         }
@@ -114,7 +106,7 @@ namespace Metroit.ChangeTracking
                 .Where(x => x.PropertyName == propertyName)
                 .Select(x => x.OriginalValue)
                 .Single();
-            var changedValue = Instance.GetType().GetProperty(propertyName).GetValue(Instance);
+            var changedValue = InstanceObject.GetType().GetProperty(propertyName).GetValue(InstanceObject);
 
             _entries
                 .Where(x => x.PropertyName == propertyName)
@@ -182,6 +174,31 @@ namespace Metroit.ChangeTracking
             {
                 yield return changedValue.PropertyName;
             }
+        }
+    }
+
+    /// <summary>
+    /// オブジェクト内にあるプロパティおよびフィールドの変更追跡を提供します。<br/>
+    /// 変更追跡が行われるのは下記をすべて満たすプロパティまたはフィールドです。<br/>
+    ///   - <see cref="NoTrackingAttribute"/> が設定されていないプロパティまたはフィールド<br/>
+    ///   - <see cref="NoTrackings"/> で指定されていないプロパティまたはフィールド<br/>
+    /// プロパティは get アクセサーが必要です。
+    /// </summary>
+    /// <typeparam name="T">変更追跡を行うクラス。</typeparam>
+    public class PropertyChangeTracker<T> : PropertyChangeTracker where T : class
+    {
+        /// <summary>
+        /// 変更追跡を行うオブジェクト。
+        /// </summary>
+        private T Instance => (T)InstanceObject;
+
+        /// <summary>
+        /// 新しいインスタンスを生成します。
+        /// </summary>
+        /// <param name="instance">変更追跡を行うオブジェクト。</param>
+        public PropertyChangeTracker(T instance) : base(instance)
+        {
+            
         }
     }
 }
