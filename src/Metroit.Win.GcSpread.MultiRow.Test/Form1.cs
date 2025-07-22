@@ -10,15 +10,15 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
             InitializeComponent();
         }
 
-        private MultiRowSheet<Record> _multiRowSheet;
-        private TrackingList<Record> _list = new TrackingList<Record>();
-        //private MultiRowSheet2<Record> _multiRowSheet;
-        //private TrackingList2<Record> _list = new TrackingList2<Record>();
+        //private MultiRowSheet<Record> _multiRowSheet;
+        //private TrackingList<Record> _list = new TrackingList<Record>();
+        private MultiRowSheet2<Record> _multiRowSheet;
+        private TrackingList2<Record> _list = new TrackingList2<Record>();
 
         private void button1_Click(object sender, EventArgs e)
         {
-            _multiRowSheet = new MultiRowSheet<Record>(metFpSpread1.ActiveSheet, 2, _list);
-            //_multiRowSheet = new MultiRowSheet2<Record>(metFpSpread1.ActiveSheet, 2, _list);
+            //_multiRowSheet = new MultiRowSheet<Record>(metFpSpread1.ActiveSheet, 2, _list);
+            _multiRowSheet = new MultiRowSheet2<Record>(metFpSpread1.ActiveSheet, 2, _list);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -38,7 +38,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         private void button7_Click(object sender, EventArgs e)
         {
             //_multiRowSheet.Rows[_multiRowSheet.GetItemIndex(metFpSpread1.ActiveSheet.ActiveRowIndex)].Item1 = "値変更";
-            //((Record)metFpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
+            ((Record)metFpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
         }
 
         private void button4_Click(object sender, EventArgs e)
