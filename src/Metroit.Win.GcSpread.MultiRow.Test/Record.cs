@@ -28,6 +28,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         [MultiRow(1, 1)]
         public string Item4 { get => _item4; set => SetProperty(ref _item4, value); }
+
         public PlainRecord() { }
         public PlainRecord(string item1, string item2, string item3, string item4)
         {

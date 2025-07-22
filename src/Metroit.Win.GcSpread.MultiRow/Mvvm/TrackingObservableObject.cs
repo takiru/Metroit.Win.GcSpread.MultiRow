@@ -20,12 +20,16 @@ namespace Metroit.CommunityToolkit.Mvvm
         [NoTracking]
         public PropertyChangeTracker<TrackingObservableObject<T>> ChangeTracker => _changeTracker;
 
+        /// <summary>
+        /// 変更追跡を取得します。
+        /// </summary>
+        [NoTracking]
         PropertyChangeTracker IPropertyChangeTracker.ChangeTracker => ChangeTracker;
 
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>
-        public TrackingObservableObject()
+        public TrackingObservableObject() : base()
         {
             _changeTracker = new PropertyChangeTracker<TrackingObservableObject<T>>(this);
             PropertyChanged += ChangesObservableObject_PropertyChanged;

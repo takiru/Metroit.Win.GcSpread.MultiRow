@@ -11,7 +11,7 @@ namespace Metroit.Collections.Generic
     /// アイテムの状態と削除されたアイテムを把握可能なリストを提供します。
     /// </summary>
     /// <typeparam name="T">把握可能にするクラス。</typeparam>
-    public class TrackingList<T> : BindingList<T>, IItemRemovedKnownList<T>, ITrackingItem<T> where T : IPropertyChangeTracker, IStateObject
+    public class TrackingList<T> : BindingList<T>, IRemoveTrackingList<T>, ITrackingItem<T> where T : IPropertyChangeTracker, IStateObject
     {
         /// <summary>
         /// 削除されたリストデータ。
@@ -26,7 +26,7 @@ namespace Metroit.Collections.Generic
         /// <summary>
         /// 削除されたリストデータ を取得します。
         /// </summary>
-        IList IItemRemovedKnownList.Removed => (IList)_removed;
+        IList IRemoveTrackingList.Removed => (IList)_removed;
 
         /// <summary>
         /// 新しいインスタンスを生成します。

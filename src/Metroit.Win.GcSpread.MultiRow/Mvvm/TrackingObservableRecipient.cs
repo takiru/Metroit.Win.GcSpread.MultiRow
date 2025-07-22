@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Metroit.Annotations;
 using Metroit.ChangeTracking;
+using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
 using System.ComponentModel;
 
 namespace Metroit.CommunityToolkit.Mvvm
@@ -8,22 +9,29 @@ namespace Metroit.CommunityToolkit.Mvvm
     /// <summary>
     /// 変更追跡が可能なオブジェクトを提供します。
     /// </summary>
-    public class TrackingObservableRecipient : ObservableRecipient
+    /// <typeparam name="T">変更追跡を行うクラス。</typeparam>
+    public class TrackingObservableRecipient<T> : ObservableRecipient, IPropertyChangeTracker<TrackingObservableRecipient<T>> where T : class
     {
-        private PropertyChangeTracker<TrackingObservableRecipient> _propertyValueTracker;
+        private PropertyChangeTracker<TrackingObservableRecipient<T>> _changeTracker;
 
         /// <summary>
         /// 変更追跡を取得します。
         /// </summary>
         [NoTracking]
-        public PropertyChangeTracker<TrackingObservableRecipient> ChangeTracker => _propertyValueTracker;
+        public PropertyChangeTracker<TrackingObservableRecipient<T>> ChangeTracker => _changeTracker;
+
+        /// <summary>
+        /// 変更追跡を取得します。
+        /// </summary>
+        [NoTracking]
+        PropertyChangeTracker IPropertyChangeTracker.ChangeTracker => ChangeTracker;
 
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>
-        public TrackingObservableRecipient()
+        public TrackingObservableRecipient() : base()
         {
-            _propertyValueTracker = new PropertyChangeTracker<TrackingObservableRecipient>(this);
+            _changeTracker = new PropertyChangeTracker<TrackingObservableRecipient<T>>(this);
 
             PropertyChanged += ChangesObservableRecipient_PropertyChanged;
         }
@@ -35,7 +43,7 @@ namespace Metroit.CommunityToolkit.Mvvm
         /// <param name="e"></param>
         private void ChangesObservableRecipient_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            _propertyValueTracker.TrackingProperty(e.PropertyName);
+            _changeTracker.TrackingProperty(e.PropertyName);
         }
     }
 }

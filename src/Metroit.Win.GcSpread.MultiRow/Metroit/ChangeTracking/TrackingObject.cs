@@ -14,6 +14,9 @@ namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
     {
         private PropertyChangeTracker<TrackingObject<T>> _changeTracker;
 
+        /// <summary>
+        /// プロパティの値が変更されたときに発生します。
+        /// </summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
         /// <summary>
@@ -22,6 +25,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
         [NoTracking]
         public PropertyChangeTracker<TrackingObject<T>> ChangeTracker => _changeTracker;
 
+        [NoTracking]
         PropertyChangeTracker IPropertyChangeTracker.ChangeTracker => ChangeTracker;
 
         /// <summary>
@@ -43,9 +47,17 @@ namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
             _changeTracker.TrackingProperty(e.PropertyName);
         }
 
+        /// <summary>
+        /// プロパティの値を設定し、変更があった場合に通知を行います。
+        /// </summary>
+        /// <typeparam name="U">プロパティの型。</typeparam>
+        /// <param name="field">更新フィールド。</param>
+        /// <param name="value">更新値。</param>
+        /// <param name="propertyName">プロパティ名。</param>
+        /// <returns>プロパティの値が変更された場合は true, それ以外は false を返却します。</returns>
         protected bool SetProperty<U>(ref U field, U value, [CallerMemberName] string propertyName = null)
         {
-            if (EqualityComparer<U>.Default.Equals(field, value))
+            if (object.Equals(field, value))
             {
                 return false;
             }
