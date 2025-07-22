@@ -16,7 +16,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections
         /// <summary>
         /// 1レコードに対する行数を取得します。
         /// </summary>
-        int RowNumber { get; }
+        int RowsPerRecord { get; }
 
         /// <summary>
         /// アイテムデータを取得します。

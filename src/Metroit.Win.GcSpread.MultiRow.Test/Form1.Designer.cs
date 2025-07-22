@@ -28,8 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            FarPoint.Win.Spread.FlatScrollBarRenderer flatScrollBarRenderer3 = new FarPoint.Win.Spread.FlatScrollBarRenderer();
-            FarPoint.Win.Spread.FlatScrollBarRenderer flatScrollBarRenderer4 = new FarPoint.Win.Spread.FlatScrollBarRenderer();
+            FarPoint.Win.Spread.FlatScrollBarRenderer flatScrollBarRenderer1 = new FarPoint.Win.Spread.FlatScrollBarRenderer();
+            FarPoint.Win.Spread.FlatScrollBarRenderer flatScrollBarRenderer2 = new FarPoint.Win.Spread.FlatScrollBarRenderer();
             metFpSpread1 = new MetFpSpread();
             metFpSpread1_Sheet1 = new FarPoint.Win.Spread.SheetView();
             button1 = new Button();
@@ -39,6 +39,7 @@
             button5 = new Button();
             button6 = new Button();
             button7 = new Button();
+            button8 = new Button();
             ((System.ComponentModel.ISupportInitialize)metFpSpread1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)metFpSpread1_Sheet1).BeginInit();
             SuspendLayout();
@@ -49,12 +50,12 @@
             metFpSpread1.AutoOpenDropDown = true;
             metFpSpread1.HorizontalScrollBar.Buttons = new FarPoint.Win.Spread.FpScrollBarButtonCollection("BackwardLineButton,ThumbTrack,ForwardLineButton");
             metFpSpread1.HorizontalScrollBar.Name = "";
-            flatScrollBarRenderer3.ArrowColor = Color.FromArgb(121, 121, 121);
-            flatScrollBarRenderer3.BackColor = Color.FromArgb(255, 255, 255);
-            flatScrollBarRenderer3.BorderActiveColor = Color.FromArgb(171, 171, 171);
-            flatScrollBarRenderer3.BorderColor = Color.FromArgb(171, 171, 171);
-            flatScrollBarRenderer3.TrackBarBackColor = Color.FromArgb(219, 219, 219);
-            metFpSpread1.HorizontalScrollBar.Renderer = flatScrollBarRenderer3;
+            flatScrollBarRenderer1.ArrowColor = Color.FromArgb(121, 121, 121);
+            flatScrollBarRenderer1.BackColor = Color.FromArgb(255, 255, 255);
+            flatScrollBarRenderer1.BorderActiveColor = Color.FromArgb(171, 171, 171);
+            flatScrollBarRenderer1.BorderColor = Color.FromArgb(171, 171, 171);
+            flatScrollBarRenderer1.TrackBarBackColor = Color.FromArgb(219, 219, 219);
+            metFpSpread1.HorizontalScrollBar.Renderer = flatScrollBarRenderer1;
             metFpSpread1.Location = new Point(12, 158);
             metFpSpread1.Margin = new Padding(4);
             metFpSpread1.MessageBoxCaption = "SPREADデザイナ";
@@ -64,12 +65,12 @@
             metFpSpread1.TabIndex = 0;
             metFpSpread1.VerticalScrollBar.Buttons = new FarPoint.Win.Spread.FpScrollBarButtonCollection("BackwardLineButton,ThumbTrack,ForwardLineButton");
             metFpSpread1.VerticalScrollBar.Name = "";
-            flatScrollBarRenderer4.ArrowColor = Color.FromArgb(121, 121, 121);
-            flatScrollBarRenderer4.BackColor = Color.FromArgb(255, 255, 255);
-            flatScrollBarRenderer4.BorderActiveColor = Color.FromArgb(171, 171, 171);
-            flatScrollBarRenderer4.BorderColor = Color.FromArgb(171, 171, 171);
-            flatScrollBarRenderer4.TrackBarBackColor = Color.FromArgb(219, 219, 219);
-            metFpSpread1.VerticalScrollBar.Renderer = flatScrollBarRenderer4;
+            flatScrollBarRenderer2.ArrowColor = Color.FromArgb(121, 121, 121);
+            flatScrollBarRenderer2.BackColor = Color.FromArgb(255, 255, 255);
+            flatScrollBarRenderer2.BorderActiveColor = Color.FromArgb(171, 171, 171);
+            flatScrollBarRenderer2.BorderColor = Color.FromArgb(171, 171, 171);
+            flatScrollBarRenderer2.TrackBarBackColor = Color.FromArgb(219, 219, 219);
+            metFpSpread1.VerticalScrollBar.Renderer = flatScrollBarRenderer2;
             // 
             // metFpSpread1_Sheet1
             // 
@@ -82,35 +83,21 @@
             metFpSpread1_Sheet1.ActiveRowIndex = -1;
             metFpSpread1_Sheet1.AlternatingRows.Get(0).BackColor = Color.LightBlue;
             metFpSpread1_Sheet1.AlternatingRows.Get(1).BackColor = Color.MistyRose;
-            metFpSpread1_Sheet1.ColumnFooter.DefaultStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.ColumnFooter.DefaultStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.ColumnFooter.DefaultStyle.Locked = false;
-            metFpSpread1_Sheet1.ColumnFooterSheetCornerStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.ColumnFooterSheetCornerStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.ColumnFooterSheetCornerStyle.Locked = false;
             metFpSpread1_Sheet1.ColumnFooterSheetCornerStyle.Parent = "CornerDefaultEnhanced";
-            metFpSpread1_Sheet1.ColumnHeader.DefaultStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.ColumnHeader.DefaultStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.ColumnHeader.DefaultStyle.Locked = false;
             metFpSpread1_Sheet1.ColumnHeader.DefaultStyle.Parent = "ColumnHeaderDefaultEnhanced";
-            metFpSpread1_Sheet1.DefaultStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.DefaultStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.DefaultStyle.Locked = false;
-            metFpSpread1_Sheet1.DefaultStyle.Parent = "DataAreaDefault";
-            metFpSpread1_Sheet1.FilterBar.DefaultStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.FilterBar.DefaultStyle.ForeColor = Color.Empty;
+            metFpSpread1_Sheet1.DefaultStyle.Parent = "";
             metFpSpread1_Sheet1.FilterBar.DefaultStyle.Locked = false;
-            metFpSpread1_Sheet1.FilterBarHeaderStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.FilterBarHeaderStyle.ForeColor = Color.Empty;
+            metFpSpread1_Sheet1.FilterBar.DefaultStyle.Parent = "";
             metFpSpread1_Sheet1.FilterBarHeaderStyle.Locked = false;
+            metFpSpread1_Sheet1.FilterBarHeaderStyle.Parent = "";
             metFpSpread1_Sheet1.Protect = true;
             metFpSpread1_Sheet1.RowHeader.Columns.Default.Resizable = false;
-            metFpSpread1_Sheet1.RowHeader.DefaultStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.RowHeader.DefaultStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.RowHeader.DefaultStyle.Locked = false;
             metFpSpread1_Sheet1.RowHeader.DefaultStyle.Parent = "RowHeaderDefaultEnhanced";
-            metFpSpread1_Sheet1.SheetCornerStyle.BackColor = Color.Empty;
-            metFpSpread1_Sheet1.SheetCornerStyle.ForeColor = Color.Empty;
             metFpSpread1_Sheet1.SheetCornerStyle.Locked = false;
             metFpSpread1_Sheet1.SheetCornerStyle.VerticalAlignment = FarPoint.Win.Spread.CellVerticalAlignment.Center;
             metFpSpread1_Sheet1.ReferenceStyle = FarPoint.Win.Spread.Model.ReferenceStyle.A1;
@@ -185,11 +172,22 @@
             button7.UseVisualStyleBackColor = true;
             button7.Click += button7_Click;
             // 
+            // button8
+            // 
+            button8.Location = new Point(93, 99);
+            button8.Name = "button8";
+            button8.Size = new Size(75, 23);
+            button8.TabIndex = 8;
+            button8.Text = "リセット";
+            button8.UseVisualStyleBackColor = true;
+            button8.Click += button8_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(570, 495);
+            Controls.Add(button8);
             Controls.Add(button7);
             Controls.Add(button6);
             Controls.Add(button5);
@@ -218,5 +216,6 @@
         private Button button5;
         private Button button6;
         private Button button7;
+        private Button button8;
     }
 }

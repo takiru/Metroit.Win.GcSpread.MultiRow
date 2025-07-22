@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0-windows;net48</TargetFrameworks>
+    <TargetFrameworks>net6.0-windows;net8.0-windows;net48</TargetFrameworks>
     <Nullable>disable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -21,8 +21,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="GrapeCity.Spread.WinForms.ja" Version="17.2.0" />
-    <PackageReference Include="Metroit" Version="2.0.0.1" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Metroit.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 {
@@ -11,8 +12,8 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <summary>
         /// アイテムデータを取得します。
         /// </summary>
-        //new ItemRemovedKnownList<T> Rows { get; }
-        new IReadOnlyList<T> Rows { get; }
+        new ItemRemovedKnownList<T> Rows { get; }
+        //new IReadOnlyList<T> Rows { get; }
 
         /// <summary>
         /// 新しいアイテムを生成します。

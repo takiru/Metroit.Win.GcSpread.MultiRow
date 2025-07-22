@@ -7,7 +7,7 @@ namespace Metroit.Win.GcSpread.MultiRow
     /// <summary>
     /// 値の変更状態を有する1レコード複数行のアイテムを提供します。
     /// </summary>
-    public abstract class StateKnownMultiRowItemBase : StateKnownItemBase
+    public abstract class StateKnownMultiRowItemBase : IStateObject
     {
         /// <summary>
         /// 新しいインスタンスを生成します。
@@ -31,6 +31,15 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         internal bool IsItemValueChanged { get; private set; } = false;
 
+        private ItemState _state = ItemState.New;
+
+        public ItemState State => _state;
+
+        public void ChangeState(ItemState state)
+        {
+            _state = state;
+        }
+
         /// <summary>
         /// アイテムの初期化を行います。
         /// </summary>
@@ -42,22 +51,22 @@ namespace Metroit.Win.GcSpread.MultiRow
             SheetState = sheetState;
         }
 
-        /// <summary>
-        /// 変更された値を通知します。
-        /// </summary>
-        /// <typeparam name="T">設定するプロパティ情報</typeparam>
-        /// <param name="propertyName">プロパティ名。</param>
-        /// <param name="value">値。</param>
-        protected override void NotifyChangedValue<T>(string propertyName, T value)
-        {
-            // リアクティブ可能な時のみリアクティブする
-            if (!CanReactive())
-            {
-                return;
-            }
+        ///// <summary>
+        ///// 変更された値を通知します。
+        ///// </summary>
+        ///// <typeparam name="T">設定するプロパティ情報</typeparam>
+        ///// <param name="propertyName">プロパティ名。</param>
+        ///// <param name="value">値。</param>
+        //protected override void NotifyChangedValue<T>(string propertyName, T value)
+        //{
+        //    // リアクティブ可能な時のみリアクティブする
+        //    if (!CanReactive())
+        //    {
+        //        return;
+        //    }
 
-            ReactiveCellValue(propertyName, value);
-        }
+        //    ReactiveCellValue(propertyName, value);
+        //}
 
         /// <summary>
         /// 変更された値をシートのセルへ反映します。
@@ -111,5 +120,7 @@ namespace Metroit.Win.GcSpread.MultiRow
 
             return true;
         }
+
+
     }
 }
