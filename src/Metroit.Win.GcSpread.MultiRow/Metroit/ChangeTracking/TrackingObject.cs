@@ -1,31 +1,30 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Metroit.Annotations;
 using Metroit.ChangeTracking;
-using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
 using System.ComponentModel;
 
-namespace Metroit.CommunityToolkit.Mvvm
+namespace Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking
 {
     /// <summary>
     /// 変更追跡が可能なオブジェクトを提供します。
     /// </summary>
     /// <typeparam name="T">変更追跡を行うクラス。</typeparam>
-    public class TrackingObservableObject<T> : ObservableObject, IPropertyChangeTracker<TrackingObservableObject<T>> where T : class
+    public class TrackingObject<T> : ObservableObject, IPropertyChangeTracker<TrackingObject<T>> where T : class
     {
-        private PropertyChangeTracker<TrackingObservableObject<T>> _changeTracker;
+        private PropertyChangeTracker<TrackingObject<T>> _changeTracker;
 
         /// <summary>
         /// 変更追跡を取得します。
         /// </summary>
         [NoTracking]
-        public PropertyChangeTracker<TrackingObservableObject<T>> ChangeTracker => _changeTracker;
+        public PropertyChangeTracker<TrackingObject<T>> ChangeTracker => _changeTracker;
 
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>
-        public TrackingObservableObject()
+        public TrackingObject()
         {
-            _changeTracker = new PropertyChangeTracker<TrackingObservableObject<T>>(this);
+            _changeTracker = new PropertyChangeTracker<TrackingObject<T>>(this);
             PropertyChanged += ChangesObservableObject_PropertyChanged;
         }
 

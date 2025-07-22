@@ -19,7 +19,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
     //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObjectEx<T>, new()
     //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObject<T>, IStateObject, new()
     //public class MultiRowSheet<T> : IDisposable where T : class, IPropertyChangeTracker<T>, IStateObject, new()
-    public class MultiRowSheet<T> : IDisposable where T : TrackingObjectWithState<T>, new()
+    public abstract class MultiRowSheetBase<T> : IDisposable where T : TrackingObjectWithState<T>, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -42,54 +42,22 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <param name="list">取り扱うリスト。</param>
         /// <param name="rowsPerRecord">1レコードの行数。</param>
         /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
+        public MultiRowSheetBase(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
         {
             Sheet = sheet;
             Sheet.CellChanged += Sheet_CellChanged;
 
             RowsPerRecord = rowsPerRecord;
             _list = list;
-            //_list.AddingNew += _list_AddingNew;
             _list.ListChanged += _list_ListChanged;
 
             CellSetup = cellSetup;
         }
 
-        //private bool _isAddingNew = false;
-
-        ///// <summary>
-        ///// 新たな行が追加されたとき。
-        ///// </summary>
-        ///// <param name="sender"></param>
-        ///// <param name="e"></param>
-        ///// <exception cref="System.NotImplementedException"></exception>
-        //private void _list_AddingNew(object sender, AddingNewEventArgs e)
-        //{
-        //    _isAddingNew = true;
-        //}
-
-        private enum ActionBeginOperation
-        {
-            /// <summary>
-            /// アクションなし。
-            /// </summary>
-            None,
-
-            /// <summary>
-            /// リストのアイテムによる操作。
-            /// </summary>
-            Item,
-
-            /// <summary>
-            /// 実際のセルによる操作。
-            /// </summary>
-            ActualCell
-        }
-
         /// <summary>
         /// どのような操作によってアクションが行われたか。
         /// </summary>
-        private ActionBeginOperation _actionBeginOperation = MultiRowSheet<T>.ActionBeginOperation.None;
+        private ActionBeginOperation _actionBeginOperation = ActionBeginOperation.None;
 
 
         private void _list_ListChanged(object sender, ListChangedEventArgs e)
@@ -134,7 +102,6 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                 _list.Last().ChangeTracker.Reset();
             }
 
-            InitializeItem((T)_list[rowIndex]);
             AddActualRow((T)_list[rowIndex]);
 
             // アイテムの値を実際のセルへ反映する
@@ -367,53 +334,6 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
             }
         }
 
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <returns>追加された行のアイテム。</returns>
-        //public T AddRow()
-        //{
-        //    return AddRow(NewItem());
-        //}
-
-        ///// <summary>
-        ///// 新しいアイテムを生成します。
-        ///// </summary>
-        ///// <returns>新しいアイテム。</returns>
-        //public T NewItem()
-        //{
-        //    return (T)_list.AddNew();
-        //    //return new T();
-        //}
-
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <param name="row">追加するアイテム。</param>
-        ///// <returns>追加されたアイテム</returns>
-        //public T AddRow(T row)
-        //{
-        //    rowAdding = true;
-
-        //    InitializeItem(row);
-        //    AddActualRow(row);
-
-        //    // アイテムの値を実際のセルへ反映する
-        //    var pis = row.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty);
-        //    foreach (var pi in pis)
-        //    {
-        //        //row.ReactiveCellValue(pi.Name, pi.GetValue(row));
-        //        ReactiveCellValue(pi.Name, row, pi);
-        //    }
-
-        //    _list.Add(row);
-        //    rowAdding = false;
-
-        //    return row;
-        //}
-
-
-
         /// <summary>
         /// 変更された値をシートのセルへ反映します。
         /// </summary>
@@ -444,88 +364,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
             return (T)Sheet.RowHeader.Rows[index].Tag;
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        //bool ISheetState.IsCellValueChanged => IsCellValueChanged;
-
-
-
-        ///// <summary>
-        ///// アイテムデータを取得します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        //[EditorBrowsable(EditorBrowsableState.Never)]
-        //IEnumerable<object> Collections.IMultiRowSheet.Rows => Rows;
-
-        /// <summary>
-        /// アイテムデータを取得します。
-        /// </summary>
-        //public IReadOnlyList<T> Rows => _rows;
-
-        ///// <summary>
-        ///// アイテムデータを取得する。
-        ///// </summary>
-        //private ItemRemovedKnownList<T> _rows = new ItemRemovedKnownList<T>();
-
         private Action<int, Cell> CellSetup { get; }
-
-
-
-        ///// <summary>
-        ///// 新しいインスタンスを生成します。
-        ///// </summary>
-        ///// <param name="sheet">シートオブジェクト。</param>
-        ///// <param name="rowNumber">1レコードの行数。</param>
-        ///// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        //public MultiRowSheet(SheetView sheet, int rowNumber, Action<int, Cell> cellSetup = null)
-        //{
-        //    Sheet = sheet;
-        //    Sheet.CellChanged += Sheet_CellChanged;
-
-        //    RowsPerRecord = rowNumber;
-        //    CellSetup = cellSetup;
-        //}
-
-
-
-
-
-
-
-        ///// <summary>
-        ///// 新しいアイテムを生成します。
-        ///// </summary>
-        ///// <returns>新しいアイテム。</returns>
-        //object Collections.IMultiRowSheet.NewItem()
-        //{
-        //    return NewItem();
-        //}
-
-
-
-        //private bool rowAdding = false;
-
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <returns>追加された行のアイテム。</returns>
-        //object Collections.IMultiRowSheet.AddRow() => AddRow();
-
-
 
         /// <summary>
         /// 行を追加します。
@@ -535,97 +374,6 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <returns>追加されたアイテム</returns>
         [EditorBrowsable(EditorBrowsableState.Never)]
         public object AddRow(object row) => AddRow((T)row);
-
-
-
-        /// <summary>
-        /// 行を追加します。
-        /// 外部からの利用は不要です。
-        /// </summary>
-        /// <param name="rows">追加するアイテム。</param>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public void AddRowRange(IEnumerable<object> rows) => AddRowRange((IEnumerable<T>)rows);
-
-        /// <summary>
-        /// 行を追加します。
-        /// </summary>
-        /// <param name="rows">追加するアイテム。</param>
-        public void AddRowRange(IEnumerable<T> rows)
-        {
-            foreach (var row in rows)
-            {
-                AddRow(row);
-            }
-        }
-
-        /// <summary>
-        /// アイテムの初期化を行う。
-        /// </summary>
-        /// <param name="item">アイテム。</param>
-        private void InitializeItem(T item)
-        {
-            //item.Initialize(Sheet, this);
-        }
-
-
-
-        ///// <summary>
-        ///// 画面の行インデックスから、行を削除する。
-        ///// </summary>
-        ///// <param name="index"></param>
-        //public void RemoveRow(int index)
-        //{
-        //    var item = (T)Sheet.RowHeader.Rows[index].Tag;
-        //    RemoveRow(item);
-        //}
-
-        ///// <summary>
-        ///// 行を削除します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        ///// <param name="row">削除するアイテム。</param>
-        //[EditorBrowsable(EditorBrowsableState.Never)]
-        //void Collections.IMultiRowSheet.RemoveRow(object row) => RemoveRow((T)row);
-
-        ///// <summary>
-        ///// 行を削除します。
-        ///// </summary>
-        ///// <param name="row">削除するオブジェクト。</param>
-        //public void RemoveRow(T row)
-        //{
-        //    var actualRowIndex = _rows.IndexOf(row) * RowsPerRecord;
-        //    Sheet.Rows.Remove(actualRowIndex, RowsPerRecord);
-        //    _rows.Remove(row);
-
-        //    foreach (var redrawRow in Rows.Select((Item, Index) => new { Item, Index }))
-        //    {
-        //        DrawRowStyle(redrawRow.Index);
-        //    }
-        //}
-
-        ///// <summary>
-        ///// アイテムのインデックスから、行を削除します。
-        ///// </summary>
-        ///// <param name="index">アイテムのインデックス。</param>
-        //public void RemoveRowItemIndex(int index)
-        //{
-        //    RemoveRow(_rows[index]);
-        //}
-
-        ///// <summary>
-        ///// すべての要素をクリアします。
-        ///// 削除されたことは通知されません。
-        ///// </summary>
-        //public void Clear()
-        //{
-        //    if (_rows.Count > 0)
-        //    {
-        //        var rowCount = ((_rows.Count - 1) * RowsPerRecord) + RowsPerRecord;
-        //        Sheet.Rows.Remove(0, rowCount);
-        //    }
-
-        //    _rows.Clear();
-        //}
 
         /// <summary>
         /// 画面の行インデックスから、アイテムのインデックスを取得します。
@@ -646,16 +394,6 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         {
             return index % RowsPerRecord;
         }
-
-        ///// <summary>
-        ///// 画面の行インデックスから、アイテムを取得します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        ///// <param name="index">画面の行インデックス。</param>
-        ///// <returns>アイテム。</returns>
-        //object Collections.IMultiRowSheet.GetItem(int index) => GetItem(index);
-
-
 
         private bool disposed = false;
 

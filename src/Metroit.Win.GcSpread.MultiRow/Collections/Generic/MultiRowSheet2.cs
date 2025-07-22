@@ -15,11 +15,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
     /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
     /// </summary>
     /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    //public class MultiRowSheet<T> : IMultiRowSheet<T>, IDisposable where T : TrackingObservableObjectEx, new()
-    //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObjectEx<T>, new()
-    //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObject<T>, IStateObject, new()
-    //public class MultiRowSheet<T> : IDisposable where T : class, IPropertyChangeTracker<T>, IStateObject, new()
-    public class MultiRowSheet<T> : IDisposable where T : TrackingObjectWithState<T>, new()
+    public class MultiRowSheet2<T> : IDisposable where T : TrackingObservableObjectWithState<T>, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -31,7 +27,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// </summary>
         public int RowsPerRecord { get; protected set; }
 
-        private TrackingList<T> _list;
+        private TrackingList2<T> _list;
 
         public IReadOnlyList<T> Rows => _list;
 
@@ -42,7 +38,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <param name="list">取り扱うリスト。</param>
         /// <param name="rowsPerRecord">1レコードの行数。</param>
         /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
+        public MultiRowSheet2(SheetView sheet, int rowsPerRecord, TrackingList2<T> list, Action<int, Cell> cellSetup = null)
         {
             Sheet = sheet;
             Sheet.CellChanged += Sheet_CellChanged;
@@ -68,28 +64,10 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         //    _isAddingNew = true;
         //}
 
-        private enum ActionBeginOperation
-        {
-            /// <summary>
-            /// アクションなし。
-            /// </summary>
-            None,
-
-            /// <summary>
-            /// リストのアイテムによる操作。
-            /// </summary>
-            Item,
-
-            /// <summary>
-            /// 実際のセルによる操作。
-            /// </summary>
-            ActualCell
-        }
-
         /// <summary>
         /// どのような操作によってアクションが行われたか。
         /// </summary>
-        private ActionBeginOperation _actionBeginOperation = MultiRowSheet<T>.ActionBeginOperation.None;
+        private ActionBeginOperation _actionBeginOperation = ActionBeginOperation.None;
 
 
         private void _list_ListChanged(object sender, ListChangedEventArgs e)
@@ -686,5 +664,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
             disposed = true;
         }
+
+
     }
 }
