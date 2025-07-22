@@ -1,6 +1,5 @@
 ﻿using FarPoint.Win.Spread;
 using Metroit.Collections.Generic;
-using Metroit.CommunityToolkit.Mvvm;
 using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
 using System;
 using System.Collections.Generic;
@@ -15,11 +14,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
     /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
     /// </summary>
     /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    //public class MultiRowSheet<T> : IMultiRowSheet<T>, IDisposable where T : TrackingObservableObjectEx, new()
-    //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObjectEx<T>, new()
-    //public class MultiRowSheet<T> : IDisposable where T : TrackingObservableObject<T>, IStateObject, new()
-    //public class MultiRowSheet<T> : IDisposable where T : class, IPropertyChangeTracker<T>, IStateObject, new()
-    public class MultiRowSheet<T> : IDisposable where T : TrackingObjectWithState<T>, new()
+    public class MultiRowSheet<T> : IDisposable where T : IPropertyChangeTracker, IStateObject, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -31,9 +26,20 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// </summary>
         public int RowsPerRecord { get; protected set; }
 
-        private TrackingList2<T> _list;
+        /// <summary>
+        /// 1レコードを複数行として扱うリスト。
+        /// </summary>
+        private TrackingList<T> _list;
 
+        /// <summary>
+        /// 行のコレクションを取得します。
+        /// </summary>
         public IReadOnlyList<T> Rows => _list;
+
+        /// <summary>
+        /// 行の追加が行われた時、セルの CellType や Tag の設定, セル結合などのセットアップを行うデリゲート。
+        /// </summary>
+        private Action<int, Cell> CellSetup { get; }
 
         /// <summary>
         /// 新しいインスタンスを生成します。
@@ -42,130 +48,52 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <param name="list">取り扱うリスト。</param>
         /// <param name="rowsPerRecord">1レコードの行数。</param>
         /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList2<T> list, Action<int, Cell> cellSetup = null)
+        public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
         {
             Sheet = sheet;
             Sheet.CellChanged += Sheet_CellChanged;
 
             RowsPerRecord = rowsPerRecord;
             _list = list;
-            //_list.AddingNew += _list_AddingNew;
             _list.ListChanged += _list_ListChanged;
 
             CellSetup = cellSetup;
         }
 
-        //private bool _isAddingNew = false;
-
-        ///// <summary>
-        ///// 新たな行が追加されたとき。
-        ///// </summary>
-        ///// <param name="sender"></param>
-        ///// <param name="e"></param>
-        ///// <exception cref="System.NotImplementedException"></exception>
-        //private void _list_AddingNew(object sender, AddingNewEventArgs e)
-        //{
-        //    _isAddingNew = true;
-        //}
-
-        private enum ActionBeginOperation
+        /// <summary>
+        /// 実際の行インデックスからアイテムを取得します。
+        /// </summary>
+        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <returns>アイテム。</returns>
+        public T GetItem(int actualRowIndex)
         {
-            /// <summary>
-            /// アクションなし。
-            /// </summary>
-            None,
+            return (T)Sheet.RowHeader.Rows[actualRowIndex].Tag;
+        }
 
-            /// <summary>
-            /// リストのアイテムによる操作。
-            /// </summary>
-            Item,
+        /// <summary>
+        /// 実際の行インデックスから、アイテムのインデックスを取得します。
+        /// </summary>
+        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <returns>アイテムのインデックス。</returns>
+        public int GetItemIndex(int actualRowIndex)
+        {
+            return actualRowIndex / RowsPerRecord;
+        }
 
-            /// <summary>
-            /// 実際のセルによる操作。
-            /// </summary>
-            ActualCell
+        /// <summary>
+        /// 実際の行インデックスから、MultiRowAttribute で指定された行インデックスを取得します。
+        /// </summary>
+        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <returns>MultiRowAttribute で指定された行インデックス。</returns>
+        public int GetAttributeRowIndex(int actualRowIndex)
+        {
+            return actualRowIndex % RowsPerRecord;
         }
 
         /// <summary>
         /// どのような操作によってアクションが行われたか。
         /// </summary>
-        private ActionBeginOperation _actionBeginOperation = MultiRowSheet<T>.ActionBeginOperation.None;
-
-
-        private void _list_ListChanged(object sender, ListChangedEventArgs e)
-        {
-            switch (e.ListChangedType)
-            {
-                case ListChangedType.ItemAdded:
-                    // Add(), AddNew(), Insert() で走行する
-                    AddRow(e.NewIndex);
-                    break;
-
-                case ListChangedType.ItemChanged:
-                    // ResetItem(), INotifyPropertyChangedによって値変更が通知されたときに走行する
-                    // ResetItem() による制御は行わない。
-                    // NOTE: ResetItem() で走行する場合、OldIndexは -1 になる。
-                    ChangeRowItem(e.NewIndex);
-                    break;
-
-                case ListChangedType.Reset:
-                    // Clear() で走行する
-                    ClearActualRows();
-                    break;
-
-                case ListChangedType.ItemDeleted:
-                    // Remove(), RemoveAt(), CancelNew() で走行する
-                    RemoveActualRow();
-                    break;
-
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rowIndex"></param>
-        private void AddRow(int rowIndex)
-        {
-            _actionBeginOperation = ActionBeginOperation.Item;
-
-            if (!_list.Last().ChangeTracker.IsTracking)
-            {
-                _list.Last().ChangeTracker.Reset();
-            }
-
-            InitializeItem((T)_list[rowIndex]);
-            AddActualRow((T)_list[rowIndex]);
-
-            // アイテムの値を実際のセルへ反映する
-            var pis = ((T)_list[rowIndex]).GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty);
-            foreach (var pi in pis)
-            {
-                ReactiveCellValue((T)_list[rowIndex], pi);
-            }
-
-            _actionBeginOperation = ActionBeginOperation.None;
-        }
-
-        /// <summary>
-        /// リストのアイテムに
-        /// </summary>
-        /// <param name="rowIndex"></param>
-        private void ChangeRowItem(int rowIndex)
-        {
-            // NOTE: Sheet_CellChanged から制御が移ったときは行わない
-            if (_actionBeginOperation == ActionBeginOperation.None)
-            {
-                _actionBeginOperation = ActionBeginOperation.Item;
-                // 直前で変更されたプロパティの値を実際のセルへ反映する
-                var pi = ((T)_list[rowIndex]).GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
-                    .Where(x => x.Name == ((T)_list[rowIndex]).ChangeTracker.LastTrackingProperty)
-                    .Single();
-                ReactiveCellValue((T)_list[rowIndex], pi);
-            }
-
-            _actionBeginOperation = ActionBeginOperation.None;
-        }
+        private ActionBeginOperation _actionBeginOperation = ActionBeginOperation.None;
 
         /// <summary>
         /// セルの値が変更された時、値を MultiRowIteBase へ反映する。
@@ -202,7 +130,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                     {
                         return false;
                     }
-                    if (attr.Row != GetItemRowIndex(e.Row) || attr.Column != e.Column)
+                    if (attr.Row != GetAttributeRowIndex(e.Row) || attr.Column != e.Column)
                     {
                         return false;
                     }
@@ -216,83 +144,81 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
             var targetType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType;
             var value = Convert.ChangeType(Sheet.Cells[e.Row, e.Column].Value, targetType);
-
             pi.SetValue(item, value);
         }
 
         /// <summary>
-        /// 実際の行を削除する。
+        /// リストの内容が変更されたときに走行する。
         /// </summary>
-        private void RemoveActualRow()
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void _list_ListChanged(object sender, ListChangedEventArgs e)
         {
-            var actualStartRowIndex = GetRemoveActualStartRowIndex();
-            Sheet.Rows.Remove(actualStartRowIndex, RowsPerRecord);
-            ReDrawBelowRows(actualStartRowIndex);
-        }
-
-        /// <summary>
-        /// 実際の行をすべて削除する。
-        /// </summary>
-        private void ClearActualRows()
-        {
-            Sheet.Rows.Clear();
-        }
-
-        /// <summary>
-        /// 削除指示が行われた1レコードの実際の開始行インデックスを取得する。
-        /// </summary>
-        /// <returns>削除指示が行われた1レコードの実際の開始行インデックス。</returns>
-        private int GetRemoveActualStartRowIndex()
-        {
-            var actualRows = Sheet.RowHeader.Rows.Cast<Row>().Select((Value, Index) => new { Index, Value });
-
-            Func<T, int> getActualStartRowIndex = (T item) =>
+            switch (e.ListChangedType)
             {
-                return actualRows.Where(x => x.Value.Tag == _list.LastAccessItem).First().Index;
-            };
+                case ListChangedType.ItemAdded:
+                    // Add(), AddNew(), Insert() で走行する
+                    ReactiveAddedRow(e.NewIndex);
+                    break;
 
-            if (_list.LastAccessItem.State == ItemState.New)
-            {
-                return getActualStartRowIndex(_list.LastAccessItem);
-            }
+                case ListChangedType.ItemChanged:
+                    // ResetItem(), INotifyPropertyChangedによって値変更が通知されたときに走行する
+                    ReactiveChangedRow(e.NewIndex);
+                    break;
 
-            if (_list.LastAccessItem.State == ItemState.NewModified)
-            {
-                return getActualStartRowIndex(_list.LastAccessItem);
-            }
+                case ListChangedType.Reset:
+                    // Clear() で走行する
+                    ClearActualRows();
+                    break;
 
-            return getActualStartRowIndex(_list.Removed.Last());
-        }
-
-        /// <summary>
-        /// <paramref name="actualStartRowIndex"/> を含む下の行を描画し直す。
-        /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void ReDrawBelowRows(int actualStartRowIndex)
-        {
-            foreach (var row in Sheet.Rows.Cast<Row>()
-                .Select((Row, Index) => new { Row, Index })
-                .Where(x => x.Index >= actualStartRowIndex && x.Index % RowsPerRecord == 0))
-            {
-                SetRowNumber(row.Index);
-                ChangeBackgroundColor(row.Index);
+                case ListChangedType.ItemDeleted:
+                    // Remove(), RemoveAt(), CancelNew() で走行する
+                    RemoveActualRow();
+                    break;
             }
         }
 
         /// <summary>
-        /// 実際のシート行を追加する。
+        /// 追加された行をリアクティブにする。
         /// </summary>
-        /// <param name="item">行のアイテム。</param>
+        /// <param name="rowIndex">追加された行。</param>
+        private void ReactiveAddedRow(int rowIndex)
+        {
+            _actionBeginOperation = ActionBeginOperation.Item;
+
+            // 追跡されていない場合は、追跡を開始する
+            if (!_list.Last().ChangeTracker.IsTracking)
+            {
+                _list.Last().ChangeTracker.Reset();
+            }
+
+            AddActualRow(_list[rowIndex]);
+
+            // アイテムの値を実際のセルへ反映する
+            var pis = _list[rowIndex].GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty);
+            foreach (var pi in pis)
+            {
+                ReactiveCellValue(_list[rowIndex], pi);
+            }
+
+            _actionBeginOperation = ActionBeginOperation.None;
+        }
+
+        /// <summary>
+        /// シートに実際の行を追加する。
+        /// </summary>
+        /// <param name="item">追加された行のアイテム。</param>
         private void AddActualRow(T item)
         {
             Sheet.Rows.Add(Sheet.Rows.Count, RowsPerRecord);
 
             // 行番号の割当と行の背景色を変更する
-            var actualRowIndex2 = Sheet.Rows.Count - RowsPerRecord;
-            DrawRowStyle(actualRowIndex2);
+            var actualStartRowIndex = Sheet.Rows.Count - RowsPerRecord;
+            DrawRowStyle(actualStartRowIndex);
 
             // 追加されたすべての行の Tag に、行オブジェクトを設定し、セルセットアップを実施する
-            for (var actualRowIndex = Sheet.Rows.Count - RowsPerRecord; actualRowIndex <= Sheet.Rows.Count - 1; actualRowIndex++)
+            var actualEndRowIndex = Sheet.Rows.Count - 1;
+            for (var actualRowIndex = actualStartRowIndex; actualRowIndex <= actualEndRowIndex; actualRowIndex++)
             {
                 Sheet.RowHeader.Rows[actualRowIndex].Tag = item;
                 if (CellSetup == null)
@@ -302,117 +228,31 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
                 for (var columnIndex = 0; columnIndex < Sheet.Columns.Count; columnIndex++)
                 {
-                    CellSetup.Invoke(GetItemRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
+                    CellSetup.Invoke(GetAttributeRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
                 }
             }
         }
 
         /// <summary>
-        /// 行ヘッダーと背景色を描画する。
+        /// 変更された行をリアクティブする。
         /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void DrawRowStyle(int actualStartRowIndex)
+        /// <param name="rowIndex">変更された行。</param>
+        private void ReactiveChangedRow(int rowIndex)
         {
-            var rowNumber = CreateActualRowNumber(actualStartRowIndex);
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
-
-            // 行ヘッダーを結合
-            Sheet.AddRowHeaderSpanCell(actualStartRowIndex, 0, RowsPerRecord, 1);
-            SetRowNumber(actualStartRowIndex);
-            ChangeBackgroundColor(actualStartRowIndex);
-        }
-
-        /// <summary>
-        /// 1レコードの実際の行番号を取得する。
-        /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        /// <returns>1レコードの実際の行番号。</returns>
-        private int CreateActualRowNumber(int actualStartRowIndex)
-        {
-            return actualStartRowIndex / RowsPerRecord;
-        }
-
-        /// <summary>
-        /// 1レコードの行ヘッダーに表示する行番号を設定する。
-        /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void SetRowNumber(int actualStartRowIndex)
-        {
-            var rowNumber = CreateActualRowNumber(actualStartRowIndex);
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
-
-            for (var i = actualStartRowIndex; i <= actualEndRowIndex; i++)
+            // NOTE: Sheet_CellChanged から制御が移ったときは行わない
+            if (_actionBeginOperation == ActionBeginOperation.None)
             {
-                Sheet.RowHeader.Cells[i, 0].Value = rowNumber + 1;
+                _actionBeginOperation = ActionBeginOperation.Item;
+
+                // 直前で変更されたプロパティの値を実際のセルへ反映する
+                var pi = _list[rowIndex].GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
+                    .Where(x => x.Name == (_list[rowIndex]).ChangeTracker.LastTrackingProperty)
+                    .Single();
+                ReactiveCellValue(_list[rowIndex], pi);
             }
+
+            _actionBeginOperation = ActionBeginOperation.None;
         }
-
-        /// <summary>
-        /// 1レコードの行の背景色を変更する。
-        /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void ChangeBackgroundColor(int actualStartRowIndex)
-        {
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
-
-            // 奇数行/偶数行で背景色の変更
-            var rowNumber = CreateActualRowNumber(actualStartRowIndex); ;
-            if (rowNumber % RowsPerRecord == 0)
-            {
-                Sheet.Rows[actualStartRowIndex, actualEndRowIndex].BackColor = Sheet.AlternatingRows.Cast<AlternatingRow>().Last().BackColor;
-            }
-            else
-            {
-                Sheet.Rows[actualStartRowIndex, actualEndRowIndex].BackColor = Sheet.AlternatingRows.Cast<AlternatingRow>().First().BackColor;
-            }
-        }
-
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <returns>追加された行のアイテム。</returns>
-        //public T AddRow()
-        //{
-        //    return AddRow(NewItem());
-        //}
-
-        ///// <summary>
-        ///// 新しいアイテムを生成します。
-        ///// </summary>
-        ///// <returns>新しいアイテム。</returns>
-        //public T NewItem()
-        //{
-        //    return (T)_list.AddNew();
-        //    //return new T();
-        //}
-
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <param name="row">追加するアイテム。</param>
-        ///// <returns>追加されたアイテム</returns>
-        //public T AddRow(T row)
-        //{
-        //    rowAdding = true;
-
-        //    InitializeItem(row);
-        //    AddActualRow(row);
-
-        //    // アイテムの値を実際のセルへ反映する
-        //    var pis = row.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty);
-        //    foreach (var pi in pis)
-        //    {
-        //        //row.ReactiveCellValue(pi.Name, pi.GetValue(row));
-        //        ReactiveCellValue(pi.Name, row, pi);
-        //    }
-
-        //    _list.Add(row);
-        //    rowAdding = false;
-
-        //    return row;
-        //}
-
-
 
         /// <summary>
         /// 変更された値をシートのセルへ反映します。
@@ -435,227 +275,105 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         }
 
         /// <summary>
-        /// 画面の行インデックスから、アイテムを取得します。
+        /// 実際の行をすべて削除する。
         /// </summary>
-        /// <param name="index">画面の行インデックス。</param>
-        /// <returns>アイテム。</returns>
-        public T GetItem(int index)
+        private void ClearActualRows()
         {
-            return (T)Sheet.RowHeader.Rows[index].Tag;
+            Sheet.Rows.Clear();
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        //bool ISheetState.IsCellValueChanged => IsCellValueChanged;
-
-
-
-        ///// <summary>
-        ///// アイテムデータを取得します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        //[EditorBrowsable(EditorBrowsableState.Never)]
-        //IEnumerable<object> Collections.IMultiRowSheet.Rows => Rows;
-
         /// <summary>
-        /// アイテムデータを取得します。
+        /// 実際の行を削除する。
         /// </summary>
-        //public IReadOnlyList<T> Rows => _rows;
-
-        ///// <summary>
-        ///// アイテムデータを取得する。
-        ///// </summary>
-        //private ItemRemovedKnownList<T> _rows = new ItemRemovedKnownList<T>();
-
-        private Action<int, Cell> CellSetup { get; }
-
-
-
-        ///// <summary>
-        ///// 新しいインスタンスを生成します。
-        ///// </summary>
-        ///// <param name="sheet">シートオブジェクト。</param>
-        ///// <param name="rowNumber">1レコードの行数。</param>
-        ///// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
-        //public MultiRowSheet(SheetView sheet, int rowNumber, Action<int, Cell> cellSetup = null)
-        //{
-        //    Sheet = sheet;
-        //    Sheet.CellChanged += Sheet_CellChanged;
-
-        //    RowsPerRecord = rowNumber;
-        //    CellSetup = cellSetup;
-        //}
-
-
-
-
-
-
-
-        ///// <summary>
-        ///// 新しいアイテムを生成します。
-        ///// </summary>
-        ///// <returns>新しいアイテム。</returns>
-        //object Collections.IMultiRowSheet.NewItem()
-        //{
-        //    return NewItem();
-        //}
-
-
-
-        //private bool rowAdding = false;
-
-        ///// <summary>
-        ///// 行を追加します。
-        ///// </summary>
-        ///// <returns>追加された行のアイテム。</returns>
-        //object Collections.IMultiRowSheet.AddRow() => AddRow();
-
-
-
-        /// <summary>
-        /// 行を追加します。
-        /// 外部からの利用は不要です。
-        /// </summary>
-        /// <param name="row">追加するアイテム。</param>
-        /// <returns>追加されたアイテム</returns>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public object AddRow(object row) => AddRow((T)row);
-
-
-
-        /// <summary>
-        /// 行を追加します。
-        /// 外部からの利用は不要です。
-        /// </summary>
-        /// <param name="rows">追加するアイテム。</param>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public void AddRowRange(IEnumerable<object> rows) => AddRowRange((IEnumerable<T>)rows);
-
-        /// <summary>
-        /// 行を追加します。
-        /// </summary>
-        /// <param name="rows">追加するアイテム。</param>
-        public void AddRowRange(IEnumerable<T> rows)
+        private void RemoveActualRow()
         {
-            foreach (var row in rows)
+            var actualStartRowIndex = Sheet.RowHeader.Rows.Cast<Row>()
+                .Select((Value, Index) => new { Index, Value })
+                .Where(x => x.Value.Tag == (object)_list.LastAccessItem)
+                .First()
+                .Index;
+            Sheet.Rows.Remove(actualStartRowIndex, RowsPerRecord);
+            ReDrawBelowRows(actualStartRowIndex);
+        }
+
+        /// <summary>
+        /// <paramref name="actualStartRowIndex"/> を含む下の行を描画し直す。
+        /// </summary>
+        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
+        private void ReDrawBelowRows(int actualStartRowIndex)
+        {
+            foreach (var row in Sheet.Rows.Cast<Row>()
+                .Select((Row, Index) => new { Row, Index })
+                .Where(x => x.Index >= actualStartRowIndex &&  GetAttributeRowIndex(x.Index) == 0))
             {
-                AddRow(row);
+                SetRowNumber(row.Index);
+                ChangeBackgroundColor(row.Index);
             }
         }
 
         /// <summary>
-        /// アイテムの初期化を行う。
+        /// 行ヘッダーと背景色を描画する。
         /// </summary>
-        /// <param name="item">アイテム。</param>
-        private void InitializeItem(T item)
+        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
+        private void DrawRowStyle(int actualStartRowIndex)
         {
-            //item.Initialize(Sheet, this);
-        }
+            var rowNumber = GetItemIndex(actualStartRowIndex);
+            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
 
-
-
-        ///// <summary>
-        ///// 画面の行インデックスから、行を削除する。
-        ///// </summary>
-        ///// <param name="index"></param>
-        //public void RemoveRow(int index)
-        //{
-        //    var item = (T)Sheet.RowHeader.Rows[index].Tag;
-        //    RemoveRow(item);
-        //}
-
-        ///// <summary>
-        ///// 行を削除します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        ///// <param name="row">削除するアイテム。</param>
-        //[EditorBrowsable(EditorBrowsableState.Never)]
-        //void Collections.IMultiRowSheet.RemoveRow(object row) => RemoveRow((T)row);
-
-        ///// <summary>
-        ///// 行を削除します。
-        ///// </summary>
-        ///// <param name="row">削除するオブジェクト。</param>
-        //public void RemoveRow(T row)
-        //{
-        //    var actualRowIndex = _rows.IndexOf(row) * RowsPerRecord;
-        //    Sheet.Rows.Remove(actualRowIndex, RowsPerRecord);
-        //    _rows.Remove(row);
-
-        //    foreach (var redrawRow in Rows.Select((Item, Index) => new { Item, Index }))
-        //    {
-        //        DrawRowStyle(redrawRow.Index);
-        //    }
-        //}
-
-        ///// <summary>
-        ///// アイテムのインデックスから、行を削除します。
-        ///// </summary>
-        ///// <param name="index">アイテムのインデックス。</param>
-        //public void RemoveRowItemIndex(int index)
-        //{
-        //    RemoveRow(_rows[index]);
-        //}
-
-        ///// <summary>
-        ///// すべての要素をクリアします。
-        ///// 削除されたことは通知されません。
-        ///// </summary>
-        //public void Clear()
-        //{
-        //    if (_rows.Count > 0)
-        //    {
-        //        var rowCount = ((_rows.Count - 1) * RowsPerRecord) + RowsPerRecord;
-        //        Sheet.Rows.Remove(0, rowCount);
-        //    }
-
-        //    _rows.Clear();
-        //}
-
-        /// <summary>
-        /// 画面の行インデックスから、アイテムのインデックスを取得します。
-        /// </summary>
-        /// <param name="index">画面の行インデックス。</param>
-        /// <returns>アイテムのインデックス。</returns>
-        public int GetItemIndex(int index)
-        {
-            return (int)Math.Truncate(index / Convert.ToDecimal(RowsPerRecord));
+            // 行ヘッダーを結合
+            Sheet.AddRowHeaderSpanCell(actualStartRowIndex, 0, RowsPerRecord, 1);
+            SetRowNumber(actualStartRowIndex);
+            ChangeBackgroundColor(actualStartRowIndex);
         }
 
         /// <summary>
-        /// 画面の行インデックスから、アイテムの MultiRowAttribute で指定された行インデックスを取得します。
+        /// 1レコードの行ヘッダーに表示する行番号を設定する。
         /// </summary>
-        /// <param name="index">画面の行インデックス。</param>
-        /// <returns>アイテムの MultiRowAttribute で指定された行インデックス。</returns>
-        public int GetItemRowIndex(int index)
+        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
+        private void SetRowNumber(int actualStartRowIndex)
         {
-            return index % RowsPerRecord;
+            // 行ヘッダーがない場合は何もしない
+            if (Sheet.RowHeader.Columns.Count == 0)
+            {
+                return;
+            }
+
+            var rowNumber = GetItemIndex(actualStartRowIndex);
+            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
+
+            for (var i = actualStartRowIndex; i <= actualEndRowIndex; i++)
+            {
+                Sheet.RowHeader.Cells[i, 0].Value = rowNumber + 1;
+            }
         }
 
-        ///// <summary>
-        ///// 画面の行インデックスから、アイテムを取得します。
-        ///// 外部からの利用は不要です。
-        ///// </summary>
-        ///// <param name="index">画面の行インデックス。</param>
-        ///// <returns>アイテム。</returns>
-        //object Collections.IMultiRowSheet.GetItem(int index) => GetItem(index);
+        /// <summary>
+        /// 1レコードの行の背景色を変更する。
+        /// </summary>
+        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
+        private void ChangeBackgroundColor(int actualStartRowIndex)
+        {
+            if (Sheet.AlternatingRows.Count == 0)
+            {
+                return;
+            }
 
+            // 行が対象となる AlternatingRow を求める
+            var rowNumber = GetItemIndex(actualStartRowIndex);
+            var alternatingRowIndex = rowNumber % RowsPerRecord;
 
+            var alternatingRow = Sheet.AlternatingRows.Cast<AlternatingRow>()
+                .Select((Value, Index) => new { Index, Value })
+                .Where(x => x.Index == alternatingRowIndex)
+                .FirstOrDefault();
+            if (alternatingRow == null)
+            {
+                return;
+            }
+
+            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
+            Sheet.Rows[actualStartRowIndex, actualEndRowIndex].BackColor = alternatingRow.Value.BackColor;
+        }
 
         private bool disposed = false;
 

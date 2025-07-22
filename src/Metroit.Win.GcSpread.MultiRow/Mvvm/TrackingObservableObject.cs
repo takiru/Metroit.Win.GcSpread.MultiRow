@@ -20,7 +20,7 @@ namespace Metroit.CommunityToolkit.Mvvm
         [NoTracking]
         public PropertyChangeTracker<TrackingObservableObject<T>> ChangeTracker => _changeTracker;
 
-        PropertyChangeTracker IPropertyChangeTracker.ChangeTrackerObject => ChangeTracker;
+        PropertyChangeTracker IPropertyChangeTracker.ChangeTracker => ChangeTracker;
 
         /// <summary>
         /// 新しいインスタンスを生成します。
