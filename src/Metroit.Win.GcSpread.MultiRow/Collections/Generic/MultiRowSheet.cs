@@ -77,7 +77,8 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <returns>アイテムのインデックス。</returns>
         public int GetItemIndex(int actualRowIndex)
         {
-            return actualRowIndex / RowsPerRecord;
+            var item = (T)Sheet.RowHeader.Rows[actualRowIndex].Tag;
+            return _list.IndexOf(item);
         }
 
         /// <summary>
@@ -212,9 +213,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         {
             Sheet.Rows.Add(Sheet.Rows.Count, RowsPerRecord);
 
-            // 行番号の割当と行の背景色を変更する
             var actualStartRowIndex = Sheet.Rows.Count - RowsPerRecord;
-            DrawRowStyle(actualStartRowIndex);
 
             // 追加されたすべての行の Tag に、行オブジェクトを設定し、セルセットアップを実施する
             var actualEndRowIndex = Sheet.Rows.Count - 1;
@@ -231,6 +230,9 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                     CellSetup.Invoke(GetAttributeRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
                 }
             }
+
+            // 行番号の割当と行の背景色を変更する
+            DrawRowStyle(actualStartRowIndex);
         }
 
         /// <summary>
@@ -304,7 +306,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         {
             foreach (var row in Sheet.Rows.Cast<Row>()
                 .Select((Row, Index) => new { Row, Index })
-                .Where(x => x.Index >= actualStartRowIndex &&  GetAttributeRowIndex(x.Index) == 0))
+                .Where(x => x.Index >= actualStartRowIndex && GetAttributeRowIndex(x.Index) == 0))
             {
                 SetRowNumber(row.Index);
                 ChangeBackgroundColor(row.Index);
@@ -312,18 +314,23 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         }
 
         /// <summary>
-        /// 行ヘッダーと背景色を描画する。
+        /// 行ヘッダーのセル結合、行番号の設定、背景色の設定を行う。
         /// </summary>
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
         private void DrawRowStyle(int actualStartRowIndex)
         {
-            var rowNumber = GetItemIndex(actualStartRowIndex);
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
-
-            // 行ヘッダーを結合
-            Sheet.AddRowHeaderSpanCell(actualStartRowIndex, 0, RowsPerRecord, 1);
+            MergeRowNumberCell(actualStartRowIndex);
             SetRowNumber(actualStartRowIndex);
             ChangeBackgroundColor(actualStartRowIndex);
+        }
+
+        /// <summary>
+        /// 行番号を表現する行ヘッダーセルを結合する。
+        /// </summary>
+        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
+        private void MergeRowNumberCell(int actualStartRowIndex)
+        {
+            Sheet.AddRowHeaderSpanCell(actualStartRowIndex, GetRowNumberColumnIndex(), RowsPerRecord, 1);
         }
 
         /// <summary>
@@ -338,13 +345,66 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                 return;
             }
 
-            var rowNumber = GetItemIndex(actualStartRowIndex);
+            // 行ヘッダーの自動テキストが空の場合は何もしない
+            if (Sheet.RowHeader.AutoText == HeaderAutoText.Blank)
+            {
+                return;
+            }
+
+            var rowNumber = GetItemIndex(actualStartRowIndex) + 1;
             var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
 
+            var rowNumberColumnIndex = GetRowNumberColumnIndex();
             for (var i = actualStartRowIndex; i <= actualEndRowIndex; i++)
             {
-                Sheet.RowHeader.Cells[i, 0].Value = rowNumber + 1;
+                if (Sheet.RowHeader.AutoText == HeaderAutoText.Numbers)
+                {
+                    Sheet.RowHeader.Cells[i, rowNumberColumnIndex].Value = rowNumber;
+                    continue;
+                }
+                if (Sheet.RowHeader.AutoText == HeaderAutoText.Letters)
+                {
+                    Sheet.RowHeader.Cells[i, rowNumberColumnIndex].Value = RowNumberToLetters(rowNumber);
+                }
             }
+        }
+
+        /// <summary>
+        /// 行番号を表現する列のインデックスを取得します。
+        /// </summary>
+        /// <returns>行番号を表現する列のインデックス。</returns>
+        private int GetRowNumberColumnIndex()
+        {
+            var rowNumberColumn = Sheet.RowHeader.AutoTextIndex;
+            if (rowNumberColumn == -1)
+            {
+                rowNumberColumn = 0;
+            }
+
+            return rowNumberColumn;
+        }
+
+        /// <summary>
+        /// 行番号を数値からアルファベットに変換します。
+        /// </summary>
+        /// <param name="number">行番号。</param>
+        /// <returns>アルファベット。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private string RowNumberToLetters(int number)
+        {
+            if (number <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(number), "1以上である必要があります。");
+            }
+
+            var result = string.Empty;
+            while (number > 0)
+            {
+                number--;
+                result = (char)('A' + (number % 26)) + result;
+                number /= 26;
+            }
+            return result;
         }
 
         /// <summary>

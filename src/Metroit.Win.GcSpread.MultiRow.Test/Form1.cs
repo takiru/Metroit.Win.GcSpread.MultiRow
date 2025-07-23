@@ -17,7 +17,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         private void button1_Click(object sender, EventArgs e)
         {
-            _multiRowSheet = new MultiRowSheet<ObservableRecord>(metFpSpread1.ActiveSheet, 2, _list);
+            _multiRowSheet = new MultiRowSheet<ObservableRecord>(metFpSpread1.ActiveSheet, 3, _list);
             //_multiRowSheet = new MultiRowSheet<PlainRecord>(metFpSpread1.ActiveSheet, 2, _list);
         }
 
