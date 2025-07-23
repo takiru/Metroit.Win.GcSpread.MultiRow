@@ -1,7 +1,6 @@
 using FarPoint.Win.Spread;
 using FarPoint.Win.Spread.Model;
 using Metroit.Collections.Generic;
-using Metroit.Win.GcSpread.MultiRow.Collections.Generic;
 
 namespace Metroit.Win.GcSpread.MultiRow.Test
 {
@@ -57,6 +56,11 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         {
             _list.Remove((ObservableRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
             //_list.Remove((PlainRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
+            
+            foreach (var removed in _list.Removed)
+            {
+                MessageBox.Show($"Removed: {removed}");
+            }
         }
 
         private void button3_Click(object sender, EventArgs e)

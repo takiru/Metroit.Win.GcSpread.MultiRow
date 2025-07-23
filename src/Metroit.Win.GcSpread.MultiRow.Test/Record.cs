@@ -1,13 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Metroit.ChangeTracking;
 using Metroit.CommunityToolkit.Mvvm;
-using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
+using Metroit.Win.GcSpread.MultiRow.Annotations;
 
 namespace Metroit.Win.GcSpread.MultiRow.Test
 {
     /// <summary>
     /// ObservableObject を使わない場合のレコード
     /// </summary>
-    public class PlainRecord : TrackingObjectWithState<PlainRecord>
+    public class PlainRecord : StatefulTrackingObject<PlainRecord>
     {
         private string _item1 = null;
 
@@ -47,7 +48,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
     /// <summary>
     /// ObservableObject を使ったレコード
     /// </summary>
-    public partial class ObservableRecord : TrackingObservableObjectWithState<ObservableRecord>
+    public partial class ObservableRecord : StatefulTrackingObservableObject<ObservableRecord>
     {
         [ObservableProperty]
         [property: MultiRow(0, 0)]

@@ -1,21 +1,22 @@
 ﻿using FarPoint.Win.Spread;
 using FarPoint.Win.Spread.Model;
+using Metroit.ChangeTracking;
 using Metroit.Collections.Generic;
-using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
+using Metroit.Win.GcSpread.MultiRow.Annotations;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 
-namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
+namespace Metroit.Win.GcSpread.MultiRow
 {
     /// <summary>
     /// 1レコードを複数行として扱う機能を提供します。
     /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
     /// </summary>
     /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    public class MultiRowSheet<T> : IDisposable where T : IPropertyChangeTracker, IStateObject, new()
+    public class MultiRowSheet<T> : IDisposable where T : IPropertyChangeTrackerProvider, IStateObject, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -103,7 +104,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <returns>行番号。</returns>
         public int GetRowNumber(int actualRowIndex)
         {
-            return (actualRowIndex / RowsPerRecord) + 1;
+            return actualRowIndex / RowsPerRecord + 1;
         }
 
         /// <summary>
@@ -123,7 +124,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
             while (number > 0)
             {
                 number--;
-                result = (char)('A' + (number % 26)) + result;
+                result = (char)('A' + number % 26) + result;
                 number /= 26;
             }
             return result;
@@ -296,7 +297,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
                 // 直前で変更されたプロパティの値を実際のセルへ反映する
                 var pi = _list[rowIndex].GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
-                    .Where(x => x.Name == (_list[rowIndex]).ChangeTracker.LastTrackingProperty)
+                    .Where(x => x.Name == _list[rowIndex].ChangeTracker.LastTrackingProperty)
                     .Single();
                 ReactiveCellValue(_list[rowIndex], pi);
             }
@@ -319,7 +320,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
 
             // 同一オブジェクトを保有する、最も早く出現する行オブジェクトを基準として値設定を行う
             var sheetRow = Sheet.RowHeader.Rows.Cast<Row>()
-                .Where(x => object.Equals(x.Tag, row))
+                .Where(x => Equals(x.Tag, row))
                 .First();
             Sheet.Cells[sheetRow.Index + attr.Row, attr.Column].Value = pi.GetValue(row);
         }
@@ -444,7 +445,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
         private void ChangeBackgroundColor(int actualStartRowIndex)
         {
-            var styleIndex = (actualStartRowIndex / RowsPerRecord) % RowsPerRecord;
+            var styleIndex = actualStartRowIndex / RowsPerRecord % RowsPerRecord;
 
             var styleModel = Sheet.Models.Style as DefaultSheetStyleModel;
             if (styleModel == null)

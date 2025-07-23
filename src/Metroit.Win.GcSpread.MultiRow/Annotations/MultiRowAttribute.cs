@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Metroit.Win.GcSpread.MultiRow
+namespace Metroit.Win.GcSpread.MultiRow.Annotations
 {
     /// <summary>
     /// 1レコード複数行のデータの定義を提供します。

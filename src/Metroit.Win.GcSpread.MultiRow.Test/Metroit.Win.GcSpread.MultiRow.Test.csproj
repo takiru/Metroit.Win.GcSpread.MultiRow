@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Metroit.CommunityToolkit.Mvvm" Version="0.0.2" />
     <PackageReference Include="Metroit.Win.GcSpread.ja" Version="17.0.1" />
   </ItemGroup>
 

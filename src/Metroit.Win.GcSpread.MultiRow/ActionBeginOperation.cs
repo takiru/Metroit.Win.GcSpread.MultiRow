@@ -1,5 +1,8 @@
-﻿namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
+﻿namespace Metroit.Win.GcSpread.MultiRow
 {
+    /// <summary>
+    /// アクション開始操作の種類を表します。
+    /// </summary>
     public enum ActionBeginOperation
     {
         /// <summary>
