@@ -21,10 +21,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="GrapeCity.Spread.WinForms.ja" Version="17.2.0" />
     <PackageReference Include="Metroit" Version="3.0.1" />
-    <PackageReference Include="Metroit.CommunityToolkit.Mvvm" Version="0.0.2" />
   </ItemGroup>
 
 </Project>
