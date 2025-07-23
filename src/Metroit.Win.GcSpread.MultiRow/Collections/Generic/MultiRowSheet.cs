@@ -1,4 +1,5 @@
 ﻿using FarPoint.Win.Spread;
+using FarPoint.Win.Spread.Model;
 using Metroit.Collections.Generic;
 using Metroit.Win.GcSpread.MultiRow.Metroit.ChangeTracking;
 using System;
@@ -79,6 +80,53 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         {
             var item = (T)Sheet.RowHeader.Rows[actualRowIndex].Tag;
             return _list.IndexOf(item);
+        }
+
+        /// <summary>
+        /// アイテムから実際の行インデックスを取得します。
+        /// </summary>
+        /// <param name="item">アイテム。</param>
+        /// <returns>実際の行インデックス。</returns>
+        public int GetActualRowIndex(T item)
+        {
+            return Sheet.RowHeader.Rows.Cast<Row>()
+                .Select((Value, Index) => new { Index, Value })
+                .Where(x => x.Value.Tag == (object)item)
+                .First()
+                .Index;
+        }
+
+        /// <summary>
+        /// 実際の行インデックスから、行番号を取得します。
+        /// </summary>
+        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <returns>行番号。</returns>
+        public int GetRowNumber(int actualRowIndex)
+        {
+            return (actualRowIndex / RowsPerRecord) + 1;
+        }
+
+        /// <summary>
+        /// 行番号を数値からアルファベットに変換します。
+        /// </summary>
+        /// <param name="number">行番号。</param>
+        /// <returns>アルファベット。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public string RowNumberToLetters(int number)
+        {
+            if (number <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(number), "1以上である必要があります。");
+            }
+
+            var result = string.Empty;
+            while (number > 0)
+            {
+                number--;
+                result = (char)('A' + (number % 26)) + result;
+                number /= 26;
+            }
+            return result;
         }
 
         /// <summary>
@@ -289,11 +337,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         /// </summary>
         private void RemoveActualRow()
         {
-            var actualStartRowIndex = Sheet.RowHeader.Rows.Cast<Row>()
-                .Select((Value, Index) => new { Index, Value })
-                .Where(x => x.Value.Tag == (object)_list.LastAccessItem)
-                .First()
-                .Index;
+            var actualStartRowIndex = GetActualRowIndex(_list.LastAccessItem);
             Sheet.Rows.Remove(actualStartRowIndex, RowsPerRecord);
             ReDrawBelowRows(actualStartRowIndex);
         }
@@ -351,8 +395,8 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                 return;
             }
 
-            var rowNumber = GetItemIndex(actualStartRowIndex) + 1;
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
+            var rowNumber = GetRowNumber(actualStartRowIndex);
+            var actualEndRowIndex = GetActualEndRowIndex(actualStartRowIndex);
 
             var rowNumberColumnIndex = GetRowNumberColumnIndex();
             for (var i = actualStartRowIndex; i <= actualEndRowIndex; i++)
@@ -367,6 +411,16 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
                     Sheet.RowHeader.Cells[i, rowNumberColumnIndex].Value = RowNumberToLetters(rowNumber);
                 }
             }
+        }
+
+        /// <summary>
+        /// 実際の開始行インデックスから、実際の終了行インデックスを取得します。
+        /// </summary>
+        /// <param name="actualStartRowIndex">実際の開始行インデックス。</param>
+        /// <returns></returns>
+        private int GetActualEndRowIndex(int actualStartRowIndex)
+        {
+            return actualStartRowIndex + RowsPerRecord - 1;
         }
 
         /// <summary>
@@ -385,54 +439,34 @@ namespace Metroit.Win.GcSpread.MultiRow.Collections.Generic
         }
 
         /// <summary>
-        /// 行番号を数値からアルファベットに変換します。
-        /// </summary>
-        /// <param name="number">行番号。</param>
-        /// <returns>アルファベット。</returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        private string RowNumberToLetters(int number)
-        {
-            if (number <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(number), "1以上である必要があります。");
-            }
-
-            var result = string.Empty;
-            while (number > 0)
-            {
-                number--;
-                result = (char)('A' + (number % 26)) + result;
-                number /= 26;
-            }
-            return result;
-        }
-
-        /// <summary>
         /// 1レコードの行の背景色を変更する。
         /// </summary>
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
         private void ChangeBackgroundColor(int actualStartRowIndex)
         {
-            if (Sheet.AlternatingRows.Count == 0)
+            var styleIndex = (actualStartRowIndex / RowsPerRecord) % RowsPerRecord;
+
+            var styleModel = Sheet.Models.Style as DefaultSheetStyleModel;
+            if (styleModel == null)
             {
                 return;
             }
 
-            // 行が対象となる AlternatingRow を求める
-            var rowNumber = GetItemIndex(actualStartRowIndex);
-            var alternatingRowIndex = rowNumber % RowsPerRecord;
+            try
+            {
+                var styleInfo = new StyleInfo();
+                styleModel.GetDirectAltRowInfo(styleIndex, styleInfo);
 
-            var alternatingRow = Sheet.AlternatingRows.Cast<AlternatingRow>()
-                .Select((Value, Index) => new { Index, Value })
-                .Where(x => x.Index == alternatingRowIndex)
-                .FirstOrDefault();
-            if (alternatingRow == null)
+                var actualEndRowIndex = GetActualEndRowIndex(actualStartRowIndex);
+                for (int i = actualStartRowIndex; i <= actualEndRowIndex; i++)
+                {
+                    Sheet.Rows[actualStartRowIndex, actualEndRowIndex].BackColor = styleInfo.BackColor;
+                }
+            }
+            catch (IndexOutOfRangeException)
             {
                 return;
             }
-
-            var actualEndRowIndex = actualStartRowIndex + RowsPerRecord - 1;
-            Sheet.Rows[actualStartRowIndex, actualEndRowIndex].BackColor = alternatingRow.Value.BackColor;
         }
 
         private bool disposed = false;

@@ -1,3 +1,5 @@
+using FarPoint.Win.Spread;
+using FarPoint.Win.Spread.Model;
 using Metroit.Collections.Generic;
 using Metroit.Win.GcSpread.MultiRow.Collections.Generic;
 
@@ -8,6 +10,18 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         public Form1()
         {
             InitializeComponent();
+
+            DefaultSheetStyleModel styleModel;
+            styleModel = (DefaultSheetStyleModel)fpSpread1.ActiveSheet.Models.Style;
+            styleModel.AltRowCount = 2;
+
+            var sInfo = new StyleInfo();
+            sInfo.BackColor = Color.LightBlue;
+            styleModel.SetDirectAltRowInfo(0, sInfo);
+
+            var sInfo2 = new StyleInfo();
+            sInfo2.BackColor = Color.LightYellow;
+            styleModel.SetDirectAltRowInfo(1, sInfo2);
         }
 
         private MultiRowSheet<ObservableRecord> _multiRowSheet;
@@ -17,8 +31,8 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         private void button1_Click(object sender, EventArgs e)
         {
-            _multiRowSheet = new MultiRowSheet<ObservableRecord>(metFpSpread1.ActiveSheet, 3, _list);
-            //_multiRowSheet = new MultiRowSheet<PlainRecord>(metFpSpread1.ActiveSheet, 2, _list);
+            _multiRowSheet = new MultiRowSheet<ObservableRecord>(fpSpread1.ActiveSheet, 2, _list);
+            //_multiRowSheet = new MultiRowSheet<PlainRecord>(fpSpread1.ActiveSheet, 2, _list);
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -35,25 +49,25 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         private void button7_Click(object sender, EventArgs e)
         {
-            ((ObservableRecord)metFpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
-            //((PlainRecord)metFpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
+            ((ObservableRecord)fpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
+            //((PlainRecord)fpSpread1.ActiveSheet.ActiveRow.Tag).Item1 = "値変更";
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
-            _list.Remove((ObservableRecord)metFpSpread1.ActiveSheet.ActiveRow.Tag);
-            //_list.Remove((PlainRecord)metFpSpread1.ActiveSheet.ActiveRow.Tag);
+            _list.Remove((ObservableRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
+            //_list.Remove((PlainRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            var record = _list[_multiRowSheet.GetItemIndex(metFpSpread1.ActiveSheet.ActiveRowIndex)];
+            var record = _list[_multiRowSheet.GetItemIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
             MessageBox.Show($"{record}");
         }
 
         private void button5_Click(object sender, EventArgs e)
         {
-            var record = _list[_multiRowSheet.GetItemIndex(metFpSpread1.ActiveSheet.ActiveRowIndex)];
+            var record = _list[_multiRowSheet.GetItemIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
             MessageBox.Show($"{record.State}");
         }
 
