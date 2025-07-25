@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Windows.Forms;
 
 namespace Metroit.Win.GcSpread.MultiRow
 {
@@ -52,8 +53,19 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
         public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
         {
+            if (rowsPerRecord < 2)
+            {
+                throw new ArgumentException("rowsPerRecord is less than 2.");
+            }
+
             Sheet = sheet;
             Sheet.CellChanged += Sheet_CellChanged;
+
+            sheet.FpSpread.Enter += FpSpread_Enter;
+            sheet.FpSpread.Leave += FpSpread_Leave;
+            sheet.FpSpread.ActiveSheetChanged += FpSpread_ActiveSheetChanged;
+            Sheet.FpSpread.CellClick += FpSpread_CellClick;
+            Sheet.FpSpread.RowDragMoveCompleted += FpSpread_RowDragMoveCompleted;
 
             RowsPerRecord = rowsPerRecord;
             _list = list;
@@ -195,6 +207,117 @@ namespace Metroit.Win.GcSpread.MultiRow
             var targetType = Nullable.GetUnderlyingType(pi.PropertyType) ?? pi.PropertyType;
             var value = Convert.ChangeType(Sheet.Cells[e.Row, e.Column].Value, targetType);
             pi.SetValue(item, value);
+        }
+
+        /// <summary>
+        /// MultiRowSheet の操作前の AllowRowMoveMultiple プロパティ。
+        /// </summary>
+        private bool _originalAllowRowMoveMultiple = false;
+
+        /// <summary>
+        /// フォーカスが当たったとき、対象シートであれば AllowRowMoveMultiple を有効にする。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_Enter(object sender, EventArgs e)
+        {
+            if (!IsActiveInstanceSheet())
+            {
+                return;
+            }
+
+            EnableAllowRowMoveMultiple();
+        }
+
+        /// <summary>
+        /// フォーカスが外れたとき、対象シートであれば AllowRowMoveMultiple を元に戻す。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_Leave(object sender, EventArgs e)
+        {
+            if (!IsActiveInstanceSheet())
+            {
+                return;
+            }
+
+            DisableAllowRowMoveMultiple();
+        }
+
+        /// <summary>
+        /// アクティブなシートが変更されたとき、対象シートであれば AllowRowMoveMultiple を有効にし、異なれば元に戻す。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_ActiveSheetChanged(object sender, EventArgs e)
+        {
+            if (IsActiveInstanceSheet())
+            {
+                EnableAllowRowMoveMultiple();
+            }
+            else
+            {
+                DisableAllowRowMoveMultiple();
+            }
+        }
+
+        /// <summary>
+        /// AllowRowMoveMultiple を有効にする。
+        /// </summary>
+        private void EnableAllowRowMoveMultiple()
+        {
+            _originalAllowRowMoveMultiple = Sheet.FpSpread.AllowRowMoveMultiple;
+            Sheet.FpSpread.AllowRowMoveMultiple = true;
+        }
+
+        /// <summary>
+        /// AllowRowMoveMultiple を元に戻す。
+        /// </summary>
+        private void DisableAllowRowMoveMultiple()
+        {
+            Sheet.FpSpread.AllowRowMoveMultiple = _originalAllowRowMoveMultiple;
+        }
+
+        /// <summary>
+        /// 行ヘッダーをクリックしたとき、1レコードのすべての行を選択状態にする。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_CellClick(object sender, CellClickEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            if (e.View.GetSheetView() != Sheet)
+            {
+                return;
+            }
+
+            if (!e.RowHeader)
+            {
+                return;
+            }
+
+            Sheet.ClearSelection();
+            Sheet.AddSelection(e.Row, -1, RowsPerRecord, -1);
+        }
+
+        /// <summary>
+        /// 行のドラッグ移動が完了したとき、ドラッグした行と下の行番号を再描画する。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_RowDragMoveCompleted(object sender, DragMoveCompletedEventArgs e)
+        {
+            if (!IsActiveInstanceSheet())
+            {
+                return;
+            }
+
+            var actualStartRowIndex = e.ToIndex < e.FromIndex ? e.ToIndex : e.FromIndex;
+            ReDrawBelowRows(actualStartRowIndex);
         }
 
         /// <summary>
@@ -468,6 +591,20 @@ namespace Metroit.Win.GcSpread.MultiRow
             {
                 return;
             }
+        }
+
+        /// <summary>
+        /// インスタンスのシートがアクティブかどうかを取得する。
+        /// </summary>
+        /// <returns>インスタンスのシートがアクティブなら true, それ以外は false を返却する。</returns>
+        private bool IsActiveInstanceSheet()
+        {
+            if (Sheet.FpSpread.ActiveSheet == Sheet)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private bool disposed = false;
