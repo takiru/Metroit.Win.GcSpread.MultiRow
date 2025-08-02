@@ -1,28 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net6.0-windows;net8.0-windows;net48</TargetFrameworks>
-    <Nullable>disable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Authors>Takeru Yamaguchi</Authors>
-    <Description>GrapeCity SPREAD for Windows Forms で複数行で1レコードを表現するためのライブラリです。</Description>
-    <Copyright>Copyright 2024 Takeru Yamaguchi.</Copyright>
-    <VersionPrefix>17.2.1.0</VersionPrefix>
-    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-    <FileVersion>$(VersionPrefix)</FileVersion>
-    <PackageProjectUrl>https://github.com/takiru/Metroit.Win.GcSpread.MultiRow</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/takiru/Metroit.Win.GcSpread.MultiRow</RepositoryUrl>
-    <PackageTags>winforms;GrapeCity;GcSpread;spreadsheet;MultiRow;</PackageTags>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageId>$(AssemblyName).ja</PackageId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0-windows;net8.0-windows;net48</TargetFrameworks>
+		<Nullable>disable</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Authors>Takeru Yamaguchi</Authors>
+		<Description>GrapeCity SPREAD for Windows Forms で複数行で1レコードを表現するためのライブラリです。</Description>
+		<Copyright>Copyright 2024 Takeru Yamaguchi.</Copyright>
+		<VersionPrefix>17.2.1.0</VersionPrefix>
+		<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+		<FileVersion>$(VersionPrefix)</FileVersion>
+		<PackageProjectUrl>https://github.com/takiru/Metroit.Win.GcSpread.MultiRow</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/takiru/Metroit.Win.GcSpread.MultiRow</RepositoryUrl>
+		<PackageTags>winforms;GrapeCity;GcSpread;spreadsheet;MultiRow;</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageId>$(AssemblyName).ja</PackageId>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="GrapeCity.Spread.WinForms.ja" Version="17.2.0" />
-    <PackageReference Include="Metroit" Version="3.0.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="GrapeCity.Spread.WinForms.ja" Version="17.2.0" />
+		<PackageReference Include="Metroit" Version="3.0.1" />
+	</ItemGroup>
 
 </Project>
