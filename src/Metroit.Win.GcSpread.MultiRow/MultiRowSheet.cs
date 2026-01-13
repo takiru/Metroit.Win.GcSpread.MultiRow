@@ -6,17 +6,21 @@ using Metroit.Win.GcSpread.MultiRow.Annotations;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Metroit.Win.GcSpread.MultiRow
 {
     /// <summary>
-    /// 1レコードを複数行として扱う機能を提供します。
-    /// null が許容されるセルのときに、アイテムが null 許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。
+    /// 1レコードを複数行として扱う機能を提供します。<br/>
+    /// 行が追加されたとき、<see cref="Row.Tag"/>には行オブジェクトが設定されます。
     /// </summary>
     /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
+    /// <remarks><see langword="null"/>が許容されるセルのときに、アイテムが<see langword="null"/>許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。</remarks>
     public class MultiRowSheet<T> : IDisposable where T : IPropertyChangeTrackerProvider, IStateObject, new()
     {
         /// <summary>
@@ -40,17 +44,19 @@ namespace Metroit.Win.GcSpread.MultiRow
         public IReadOnlyList<T> Rows => _list;
 
         /// <summary>
-        /// 行の追加が行われた時、セルの CellType や Tag の設定, セル結合などのセットアップを行うデリゲート。
+        /// 行の追加が行われた時、セル単位で行うセットアップのデリゲート。
         /// </summary>
-        private Action<int, Cell> CellSetup { get; }
+        private Action<int, Cell> _cellSetup { get; }
 
         /// <summary>
-        /// 新しいインスタンスを生成します。
+        /// 新しいインスタンスを生成します。<br/>
+        /// 対象としたシートの<see cref="SheetView.OperationMode"/>は<see cref="OperationMode.Normal"/>に設定されます。<br/>
+        /// <see cref="FpSpread.LegacyBehaviors"/>に<see cref="LegacyBehaviors.Style"/>が含まれる場合、<see cref="Rows.DefaultRow"/>の<see cref="Row.Resizable"/>は<see langword="false"/>に設定されます。<br/>
         /// </summary>
         /// <param name="sheet">シートオブジェクト。</param>
         /// <param name="list">取り扱うリスト。</param>
         /// <param name="rowsPerRecord">1レコードの行数。</param>
-        /// <param name="cellSetup">行の追加が行われた時、セルの CellType や Tag の設定, セル結合などを行い、行のセル情報設定します。</param>
+        /// <param name="cellSetup">行の追加が行われた時、セル単位で行うセットアップ。</param>
         public MultiRowSheet(SheetView sheet, int rowsPerRecord, TrackingList<T> list, Action<int, Cell> cellSetup = null)
         {
             if (rowsPerRecord < 2)
@@ -59,19 +65,69 @@ namespace Metroit.Win.GcSpread.MultiRow
             }
 
             Sheet = sheet;
-            Sheet.CellChanged += Sheet_CellChanged;
+            Sheet.OperationMode = OperationMode.Normal;
 
             sheet.FpSpread.Enter += FpSpread_Enter;
             sheet.FpSpread.Leave += FpSpread_Leave;
             sheet.FpSpread.ActiveSheetChanged += FpSpread_ActiveSheetChanged;
             Sheet.FpSpread.CellClick += FpSpread_CellClick;
+            Sheet.FpSpread.MouseMove += FpSpread_MouseMove;
+            Sheet.FpSpread.MouseUp += FpSpread_MouseUp;
             Sheet.FpSpread.RowDragMoveCompleted += FpSpread_RowDragMoveCompleted;
+            Sheet.CellChanged += Sheet_CellChanged;
+
+            if ((Sheet.FpSpread.LegacyBehaviors & LegacyBehaviors.Style) == LegacyBehaviors.Style)
+            {
+                Sheet.Rows.Default.Resizable = false;
+            }
 
             RowsPerRecord = rowsPerRecord;
             _list = list;
-            _list.ListChanged += _list_ListChanged;
+            _list.ListChanged += TrackingList_ListChanged;
 
-            CellSetup = cellSetup;
+            _cellSetup = cellSetup;
+        }
+
+        /// <summary>
+        /// 実際の行インデックスから、UIレコードのインデックスを取得します。
+        /// </summary>
+        /// <returns>UIレコードのインデックス。</returns>
+        public int GetUIRecordIndex(int actualRowIndex)
+        {
+            return actualRowIndex / RowsPerRecord;
+        }
+
+        /// <summary>
+        /// UIレコードのインデックスから、そのレコードの実際の開始行インデックスを取得します。
+        /// </summary>
+        /// <returns>実際の開始行インデックス。</returns>
+        public int GetUIActualStartRowIndex(int uiRecordIndex)
+        {
+            return uiRecordIndex * RowsPerRecord;
+        }
+
+        /// <summary>
+        /// アイテムから実際の開始行インデックスを取得します。
+        /// </summary>
+        /// <param name="item">アイテム。</param>
+        /// <returns>実際の行インデックス。</returns>
+        public int GetUIActualStartRowIndex(T item)
+        {
+            return Sheet.RowHeader.Rows.Cast<Row>()
+                .Select((Value, Index) => new { Index, Value })
+                .Where(x => x.Value.Tag == (object)item)
+                .First()
+                .Index;
+        }
+
+        /// <summary>
+        /// 実際の行インデックスから、アイテムのインデックスを取得します。
+        /// </summary>
+        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <returns>アイテムのインデックス。</returns>
+        public int GetItemIndex(int actualRowIndex)
+        {
+            return _list.IndexOf(GetItem(actualRowIndex));
         }
 
         /// <summary>
@@ -85,32 +141,17 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の行インデックスから、アイテムのインデックスを取得します。
+        /// UIレコードのインデックスからアイテムを取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns>アイテムのインデックス。</returns>
-        public int GetItemIndex(int actualRowIndex)
+        /// <param name="uiRecordIndex">UIレコードのインデックス。</param>
+        /// <returns>アイテム。</returns>
+        public T GetItemByUIRecordIndex(int uiRecordIndex)
         {
-            var item = (T)Sheet.RowHeader.Rows[actualRowIndex].Tag;
-            return _list.IndexOf(item);
+            return GetItem(GetUIActualStartRowIndex(uiRecordIndex));
         }
 
         /// <summary>
-        /// アイテムから実際の行インデックスを取得します。
-        /// </summary>
-        /// <param name="item">アイテム。</param>
-        /// <returns>実際の行インデックス。</returns>
-        public int GetActualRowIndex(T item)
-        {
-            return Sheet.RowHeader.Rows.Cast<Row>()
-                .Select((Value, Index) => new { Index, Value })
-                .Where(x => x.Value.Tag == (object)item)
-                .First()
-                .Index;
-        }
-
-        /// <summary>
-        /// 実際の行インデックスから、行番号を取得します。
+        /// 実際の行インデックスから行番号を取得します。
         /// </summary>
         /// <param name="actualRowIndex">実際の行インデックス。</param>
         /// <returns>行番号。</returns>
@@ -120,37 +161,154 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 行番号を数値からアルファベットに変換します。
-        /// </summary>
-        /// <param name="number">行番号。</param>
-        /// <returns>アルファベット。</returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public string RowNumberToLetters(int number)
-        {
-            if (number <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(number), "1以上である必要があります。");
-            }
-
-            var result = string.Empty;
-            while (number > 0)
-            {
-                number--;
-                result = (char)('A' + number % 26) + result;
-                number /= 26;
-            }
-            return result;
-        }
-
-        /// <summary>
-        /// 実際の行インデックスから、MultiRowAttribute で指定された行インデックスを取得します。
+        /// 実際の行インデックスから、<see cref="MultiRowAttribute"/>で指定された行インデックスを取得します。
         /// </summary>
         /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns>MultiRowAttribute で指定された行インデックス。</returns>
+        /// <returns><see cref="MultiRowAttribute"/>で指定された行インデックス。</returns>
         public int GetAttributeRowIndex(int actualRowIndex)
         {
             return actualRowIndex % RowsPerRecord;
         }
+
+        /// <summary>
+        /// 行番号を数値から行を表現するアルファベットに変換します。
+        /// </summary>
+        /// <param name="rowNumber">行番号。</param>
+        /// <returns>行を表現するアルファベット。</returns>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private static string RowNumberToLetters(int rowNumber)
+        {
+            if (rowNumber <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(rowNumber), "Must be 1 or greater.");
+            }
+
+            var result = string.Empty;
+            while (rowNumber > 0)
+            {
+                rowNumber--;
+                result = (char)('A' + rowNumber % 26) + result;
+                rowNumber /= 26;
+            }
+            return result;
+        }
+
+
+
+
+
+        /// <summary>
+        /// クリックによってマウスダウンされた位置。
+        /// </summary>
+        private Point _mouseDownPoint;
+
+        /// <summary>
+        /// 行をドラッグ中かどうか。
+        /// </summary>
+        private bool _isRowDragging = false;
+
+        /// <summary>
+        /// クリックによってマウスダウンされた実際の行インデックス。
+        /// </summary>
+        private int _mouseDownRow = -1;
+
+        /// <summary>
+        /// ドラッグと判定する移動距離の閾値。
+        /// </summary>
+        private readonly int DragThreshold = 5;
+
+        /// <summary>
+        /// マウスアップで行移動を完了させる。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (!IsActive)
+            {
+                return;
+            }
+
+            if (e.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            // 行移動させたときには状態をリセット
+            if (_isRowDragging)
+            {
+                _mouseDownRow = -1;
+                _isRowDragging = false;
+            }
+        }
+
+        /// <summary>
+        /// 指定したUIレコードを選択します。
+        /// </summary>
+        /// <param name="recordIndex">レコードのインデックス。</param>
+        private void SelectUIRecord(int recordIndex)
+        {
+            var actualStartRow = GetUIActualStartRowIndex(recordIndex);
+            Sheet.SetActiveCell(actualStartRow, -1, true);
+            Sheet.AddSelection(actualStartRow, -1, RowsPerRecord, -1);
+        }
+
+        /// <summary>
+        /// マウス移動時の処理。
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void FpSpread_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!IsActive)
+            {
+                return;
+            }
+
+            if (e.Button != MouseButtons.Left || _mouseDownRow < 0)
+            {
+                return;
+            }
+
+            // 行ヘッダー以外はスキップ
+            var hitTest = Sheet.FpSpread.HitTest(e.X, e.Y);
+            if (hitTest.HeaderInfo == null)
+            {
+                return;
+            }
+            if (hitTest.Type != HitTestType.RowHeader)
+            {
+                return;
+            }
+
+            // ドラッグ開始判定
+            int deltaX = Math.Abs(e.X - _mouseDownPoint.X);
+            int deltaY = Math.Abs(e.Y - _mouseDownPoint.Y);
+
+            if (!_isRowDragging && (deltaX > DragThreshold || deltaY > DragThreshold))
+            {
+                _isRowDragging = true;
+            }
+
+            if (!_isRowDragging)
+            {
+                return;
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         /// <summary>
         /// どのような操作によってアクションが行われたか。
@@ -221,7 +379,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="e"></param>
         private void FpSpread_Enter(object sender, EventArgs e)
         {
-            if (!IsActiveInstanceSheet())
+            if (!IsActive)
             {
                 return;
             }
@@ -236,7 +394,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="e"></param>
         private void FpSpread_Leave(object sender, EventArgs e)
         {
-            if (!IsActiveInstanceSheet())
+            if (!IsActive)
             {
                 return;
             }
@@ -251,7 +409,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="e"></param>
         private void FpSpread_ActiveSheetChanged(object sender, EventArgs e)
         {
-            if (IsActiveInstanceSheet())
+            if (IsActive)
             {
                 EnableAllowRowMoveMultiple();
             }
@@ -285,23 +443,90 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="e"></param>
         private void FpSpread_CellClick(object sender, CellClickEventArgs e)
         {
+            //if (e.Button != MouseButtons.Left)
+            //{
+            //    return;
+            //}
+
+            //if (e.View.GetSheetView() != Sheet)
+            //{
+            //    return;
+            //}
+
+            //if (!e.RowHeader)
+            //{
+            //    return;
+            //}
+
+            //Sheet.ClearSelection();
+            //Sheet.AddSelection(e.Row, -1, RowsPerRecord, -1);
+
+
+
+            if (!IsActive)
+            {
+                return;
+            }
+
             if (e.Button != MouseButtons.Left)
             {
                 return;
             }
 
-            if (e.View.GetSheetView() != Sheet)
+            HitTestInformation hitTest = Sheet.FpSpread.HitTest(e.X, e.Y);
+
+            // 行ヘッダー以外はスキップ
+            if (hitTest.HeaderInfo == null)
+            {
+                return;
+            }
+            if (hitTest.Type != HitTestType.RowHeader)
             {
                 return;
             }
 
-            if (!e.RowHeader)
+            Debug.WriteLine("MouseClick");
+
+            _mouseDownPoint = Sheet.FpSpread.PointToClient(Cursor.Position);
+            Debug.WriteLine($"{_mouseDownPoint}");
+            _mouseDownRow = hitTest.HeaderInfo.Row;
+            _isRowDragging = false;
+
+            int clickedRecordIndex = GetUIRecordIndex(_mouseDownRow);
+
+            var delayedSelectRecordTask = new Task(() =>
             {
+                if (Sheet.FpSpread.InvokeRequired)
+                {
+                    Sheet.FpSpread.Invoke(new System.Action(() =>
+                    {
+                        SelectUIRecord(clickedRecordIndex);
+                    }));
+                }
+                else
+                {
+                    SelectUIRecord(clickedRecordIndex);
+                }
+            });
+
+
+            // NOTE: Shift/Ctrlキーが押されている場合は、標準動作のあとに1レコードを選択状態とする。
+            if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift ||
+                (Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                delayedSelectRecordTask.Start();
                 return;
             }
 
-            Sheet.ClearSelection();
-            Sheet.AddSelection(e.Row, -1, RowsPerRecord, -1);
+            // NOTE: 移動が許容されていないときは標準動作によって1レコード全体が選択状態とならないため、標準動作のあとに1レコード全体を選択状態とする。
+            if (!Sheet.FpSpread.AllowRowMove)
+            {
+                delayedSelectRecordTask.Start();
+                return;
+            }
+
+            // 通常のクリック：1レコードを選択
+            SelectUIRecord(clickedRecordIndex);
         }
 
         /// <summary>
@@ -311,13 +536,21 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="e"></param>
         private void FpSpread_RowDragMoveCompleted(object sender, DragMoveCompletedEventArgs e)
         {
-            if (!IsActiveInstanceSheet())
+            if (!IsActive)
             {
                 return;
             }
 
-            var actualStartRowIndex = e.ToIndex < e.FromIndex ? e.ToIndex : e.FromIndex;
-            ReDrawBelowRows(actualStartRowIndex);
+            var fromIndex = e.FromIndex;
+            var toIndex = e.ToIndex;
+
+            if (e.ToIndex < e.FromIndex)
+            {
+                fromIndex = e.ToIndex;
+                toIndex = e.FromIndex;
+            }
+
+            ReDrawRowAppearance(fromIndex, toIndex);
         }
 
         /// <summary>
@@ -325,7 +558,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void _list_ListChanged(object sender, ListChangedEventArgs e)
+        private void TrackingList_ListChanged(object sender, ListChangedEventArgs e)
         {
             switch (e.ListChangedType)
             {
@@ -384,6 +617,13 @@ namespace Metroit.Win.GcSpread.MultiRow
         private void AddActualRow(T item)
         {
             Sheet.Rows.Add(Sheet.Rows.Count, RowsPerRecord);
+            if ((Sheet.FpSpread.LegacyBehaviors & LegacyBehaviors.Style) == 0)
+            {
+                for (var i = 0; i < RowsPerRecord; i++)
+                {
+                    Sheet.Rows[Sheet.Rows.Count - 1 - i].Resizable = false;
+                }
+            }
 
             var actualStartRowIndex = Sheet.Rows.Count - RowsPerRecord;
 
@@ -392,19 +632,19 @@ namespace Metroit.Win.GcSpread.MultiRow
             for (var actualRowIndex = actualStartRowIndex; actualRowIndex <= actualEndRowIndex; actualRowIndex++)
             {
                 Sheet.RowHeader.Rows[actualRowIndex].Tag = item;
-                if (CellSetup == null)
+                if (_cellSetup == null)
                 {
                     continue;
                 }
 
                 for (var columnIndex = 0; columnIndex < Sheet.Columns.Count; columnIndex++)
                 {
-                    CellSetup.Invoke(GetAttributeRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
+                    _cellSetup.Invoke(GetAttributeRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
                 }
             }
 
             // 行番号の割当と行の背景色を変更する
-            DrawRowStyle(actualStartRowIndex);
+            DrawRowAppearance(actualStartRowIndex);
         }
 
         /// <summary>
@@ -461,23 +701,37 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         private void RemoveActualRow()
         {
-            var actualStartRowIndex = GetActualRowIndex(_list.LastAccessItem);
+            var actualStartRowIndex = GetUIActualStartRowIndex(_list.LastAccessItem);
             Sheet.Rows.Remove(actualStartRowIndex, RowsPerRecord);
-            ReDrawBelowRows(actualStartRowIndex);
+            ReDrawRowAppearance(actualStartRowIndex);
         }
 
         /// <summary>
         /// <paramref name="actualStartRowIndex"/> を含む下の行を描画し直す。
         /// </summary>
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void ReDrawBelowRows(int actualStartRowIndex)
+        private void ReDrawRowAppearance(int actualStartRowIndex)
         {
             foreach (var row in Sheet.Rows.Cast<Row>()
                 .Select((Row, Index) => new { Row, Index })
                 .Where(x => x.Index >= actualStartRowIndex && GetAttributeRowIndex(x.Index) == 0))
             {
-                SetRowNumber(row.Index);
-                ChangeBackgroundColor(row.Index);
+                DrawRowAppearance(row.Index);
+            }
+        }
+
+        /// <summary>
+        /// <paramref name="fromIndex"/>から<paramref name="toIndex"/>に含まれる行を描画し直す。
+        /// </summary>
+        /// <param name="fromIndex">1レコードの実際の開始行インデックス。</param>
+        /// <param name="toIndex">1レコードの実際の終了行インデックス。</param>
+        private void ReDrawRowAppearance(int fromIndex, int toIndex)
+        {
+            foreach (var row in Sheet.Rows.Cast<Row>()
+                .Select((Row, Index) => new { Row, Index })
+                .Where(x => x.Index >= fromIndex && x.Index <= toIndex && GetAttributeRowIndex(x.Index) == 0))
+            {
+                DrawRowAppearance(row.Index);
             }
         }
 
@@ -485,7 +739,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// 行ヘッダーのセル結合、行番号の設定、背景色の設定を行う。
         /// </summary>
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void DrawRowStyle(int actualStartRowIndex)
+        private void DrawRowAppearance(int actualStartRowIndex)
         {
             MergeRowNumberCell(actualStartRowIndex);
             SetRowNumber(actualStartRowIndex);
@@ -556,7 +810,7 @@ namespace Metroit.Win.GcSpread.MultiRow
             var rowNumberColumn = Sheet.RowHeader.AutoTextIndex;
             if (rowNumberColumn == -1)
             {
-                rowNumberColumn = 0;
+                rowNumberColumn = Sheet.RowHeader.ColumnCount - 1;
             }
 
             return rowNumberColumn;
@@ -568,13 +822,18 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
         private void ChangeBackgroundColor(int actualStartRowIndex)
         {
-            var styleIndex = actualStartRowIndex / RowsPerRecord % RowsPerRecord;
-
             var styleModel = Sheet.Models.Style as DefaultSheetStyleModel;
             if (styleModel == null)
             {
                 return;
             }
+            if (styleModel.AltRowCount == 0)
+            {
+                return;
+            }
+
+            var recordIndex = GetUIRecordIndex(actualStartRowIndex);
+            var styleIndex = recordIndex % styleModel.AltRowCount;
 
             try
             {
@@ -594,18 +853,10 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// インスタンスのシートがアクティブかどうかを取得する。
+        /// シートがアクティブかどうかを取得します。
         /// </summary>
-        /// <returns>インスタンスのシートがアクティブなら true, それ以外は false を返却する。</returns>
-        private bool IsActiveInstanceSheet()
-        {
-            if (Sheet.FpSpread.ActiveSheet == Sheet)
-            {
-                return true;
-            }
-
-            return false;
-        }
+        /// <returns>シートがアクティブなら<see langword="true"/>, それ以外は<see langword="false"/>を返却します。</returns>
+        public bool IsActive => Sheet.FpSpread.ActiveSheet == Sheet;
 
         private bool disposed = false;
 

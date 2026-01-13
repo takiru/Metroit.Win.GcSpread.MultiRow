@@ -56,7 +56,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         {
             _list.Remove((ObservableRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
             //_list.Remove((PlainRecord)fpSpread1.ActiveSheet.ActiveRow.Tag);
-            
+
             foreach (var removed in _list.Removed)
             {
                 MessageBox.Show($"Removed: {removed}");
