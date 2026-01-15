@@ -1,6 +1,8 @@
 using FarPoint.Win.Spread;
 using FarPoint.Win.Spread.Model;
+using GrapeCity.Spreadsheet;
 using Metroit.Collections.Generic;
+using Metroit.Win.GcSpread.Extensions;
 
 namespace Metroit.Win.GcSpread.MultiRow.Test
 {
@@ -9,18 +11,6 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         public Form1()
         {
             InitializeComponent();
-
-            DefaultSheetStyleModel styleModel;
-            styleModel = (DefaultSheetStyleModel)fpSpread1.ActiveSheet.Models.Style;
-            styleModel.AltRowCount = 2;
-
-            var sInfo = new StyleInfo();
-            sInfo.BackColor = Color.LightBlue;
-            styleModel.SetDirectAltRowInfo(0, sInfo);
-
-            var sInfo2 = new StyleInfo();
-            sInfo2.BackColor = Color.LightYellow;
-            styleModel.SetDirectAltRowInfo(1, sInfo2);
         }
 
         private MultiRowSheet<ObservableRecord> _multiRowSheet;
@@ -30,8 +20,18 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         private void button1_Click(object sender, EventArgs e)
         {
-            _multiRowSheet = new MultiRowSheet<ObservableRecord>(fpSpread1.ActiveSheet, 2, _list);
-            //_multiRowSheet = new MultiRowSheet<PlainRecord>(fpSpread1.ActiveSheet, 2, _list);
+            var config = new MultiRowSheetConfiguration<ObservableRecord>(fpSpread1.ActiveSheet, 2);
+            config.OddBackColor = System.Drawing.Color.LightCyan;
+            config.EvenBackColor = System.Drawing.Color.LightYellow;
+
+            // NOTE: Tag の値がオリジナルのオブジェクトだったとき、この設定で任意のプロパティに設定／取得を可能にする。
+            //       TagDelivery を設定しない場合、Tag プロパティにはオブジェクトがそのまま設定される。
+            //config.TagDelivery = new RowTagDelivery<ObservableRecord>(
+            //    (row, item) => row.Tag = item,
+            //    (tag) => (ObservableRecord)tag
+            //    );
+
+            _multiRowSheet = MultiRowSheet<ObservableRecord>.Start(config, _list);
         }
 
         private void button2_Click(object sender, EventArgs e)
