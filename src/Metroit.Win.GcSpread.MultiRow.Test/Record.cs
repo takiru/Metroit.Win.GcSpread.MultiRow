@@ -1,6 +1,9 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.ComponentModel;
+using System.Diagnostics;
+using CommunityToolkit.Mvvm.ComponentModel;
 using Metroit.ChangeTracking;
-using Metroit.CommunityToolkit.Mvvm;
+using Metroit.ChangeTracking.Generic;
+using Metroit.CommunityToolkit.Mvvm.ChangeTracking;
 using Metroit.Win.GcSpread.MultiRow.Annotations;
 
 namespace Metroit.Win.GcSpread.MultiRow.Test
@@ -8,7 +11,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
     /// <summary>
     /// ObservableObject を使わない場合のレコード
     /// </summary>
-    public class PlainRecord : StatefulTrackingObject<PlainRecord>
+    public class PlainRecord : StatefulTrackingObject<PlainRecord, PropertyChangeTracker<PlainRecord>>
     {
         private string _item1 = null;
 
@@ -30,17 +33,41 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         [MultiRow(1, 1)]
         public string Item4 { get => _item4; set => SetProperty(ref _item4, value); }
 
-        public PlainRecord() { }
+        public PlainRecord()
+        {
+            ChangeTracker.Reset();
+
+
+            ChangeTracker.TrackingPropertyValueChanged += (sender, e) =>
+            {
+                Debug.WriteLine($"Non argument constructor TrackingPropertyValueChanged:{e.PropertyName}");
+            };
+        }
+
         public PlainRecord(string item1, string item2, string item3, string item4)
         {
-            Item1 = item1;
-            Item2 = item2;
-            Item3 = item3;
-            Item4 = item4;
+            _item1 = item1;
+            _item2 = item2;
+            _item3 = item3;
+            _item4 = item4;
+
+            ChangeTracker.Reset();
+
+            ChangeTracker.TrackingPropertyValueChanged += (sender, e) =>
+            {
+                Debug.WriteLine($"Has argument constructor TrackingPropertyValueChanged:{e.PropertyName}");
+            };
+
         }
         public override string ToString()
         {
             return $"{Item1}, {Item2}, {Item3}, {Item4}";
+        }
+
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+            Debug.WriteLine(e.PropertyName);
         }
     }
 
@@ -48,7 +75,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
     /// <summary>
     /// ObservableObject を使ったレコード
     /// </summary>
-    public partial class ObservableRecord : StatefulTrackingObservableObject<ObservableRecord>
+    public partial class ObservableRecord : StatefulTrackingObservableObject<ObservableRecord, PropertyChangeTracker<ObservableRecord>>
     {
         [ObservableProperty]
         [property: MultiRow(0, 0)]
@@ -66,19 +93,41 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         [property: MultiRow(1, 1)]
         private string _item4 = null;
 
-        public ObservableRecord() : base() { }
+        public ObservableRecord() : base()
+        {
+            ChangeTracker.Reset();
+
+
+            ChangeTracker.TrackingPropertyValueChanged += (sender, e) =>
+            {
+                Debug.WriteLine($"Non argument constructor TrackingPropertyValueChanged:{e.PropertyName}");
+            };
+        }
 
         public ObservableRecord(string item1, string item2, string item3, string item4) : base()
         {
-            Item1 = item1;
-            Item2 = item2;
-            Item3 = item3;
-            Item4 = item4;
+            _item1 = item1;
+            _item2 = item2;
+            _item3 = item3;
+            _item4 = item4;
+
+            ChangeTracker.Reset();
+
+            ChangeTracker.TrackingPropertyValueChanged += (sender, e) =>
+            {
+                Debug.WriteLine($"Has argument constructor TrackingPropertyValueChanged:{e.PropertyName}");
+            };
         }
 
         public override string ToString()
         {
             return $"{Item1}, {Item2}, {Item3}, {Item4}";
+        }
+
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            base.OnPropertyChanged(e);
+            Debug.WriteLine(e.PropertyName);
         }
     }
 }

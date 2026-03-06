@@ -1,8 +1,4 @@
-using FarPoint.Win.Spread;
-using FarPoint.Win.Spread.Model;
-using GrapeCity.Spreadsheet;
 using Metroit.Collections.Generic;
-using Metroit.Win.GcSpread.Extensions;
 
 namespace Metroit.Win.GcSpread.MultiRow.Test
 {
@@ -21,6 +17,7 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
         private void button1_Click(object sender, EventArgs e)
         {
             var config = new MultiRowSheetConfiguration<ObservableRecord>(fpSpread1.ActiveSheet, 2);
+            //var config = new MultiRowSheetConfiguration<PlainRecord>(fpSpread1.ActiveSheet, 2);
             config.OddBackColor = System.Drawing.Color.LightCyan;
             config.EvenBackColor = System.Drawing.Color.LightYellow;
 
@@ -32,6 +29,11 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
             //    );
 
             _multiRowSheet = MultiRowSheet<ObservableRecord>.Start(config, _list);
+            //_multiRowSheet = MultiRowSheet<PlainRecord>.Start(config, _list);
+
+            //var a = new ObservableRecord("a", "b", "c", "");
+            //a.Item4 = "d";
+            //_list.Add(a);
         }
 
         private void button2_Click(object sender, EventArgs e)

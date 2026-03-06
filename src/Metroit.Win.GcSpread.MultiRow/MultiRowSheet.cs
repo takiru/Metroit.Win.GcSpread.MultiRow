@@ -1,13 +1,10 @@
 ﻿using FarPoint.Win.Spread;
-using FarPoint.Win.Spread.Model;
-using GrapeCity.Spreadsheet;
 using Metroit.ChangeTracking;
 using Metroit.Collections.Generic;
 using Metroit.Win.GcSpread.MultiRow.Annotations;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Reflection;
