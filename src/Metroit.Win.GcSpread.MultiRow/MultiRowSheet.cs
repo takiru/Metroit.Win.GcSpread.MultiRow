@@ -286,7 +286,7 @@ namespace Metroit.Win.GcSpread.MultiRow
 
             // 行ヘッダー以外はスキップ
             var hitTest = Sheet.FpSpread.HitTest(e.X, e.Y);
-            if (hitTest.HeaderInfo == null)
+            if (hitTest?.HeaderInfo == null)
             {
                 return;
             }

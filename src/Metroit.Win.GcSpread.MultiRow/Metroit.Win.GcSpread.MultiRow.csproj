@@ -8,7 +8,7 @@
 		<Authors>Takeru Yamaguchi</Authors>
 		<Description>GrapeCity SPREAD for Windows Forms で複数行で1レコードを表現するためのライブラリです。</Description>
 		<Copyright>Copyright 2024 Takeru Yamaguchi.</Copyright>
-		<VersionPrefix>17.3.0.0</VersionPrefix>
+		<VersionPrefix>17.3.0.1</VersionPrefix>
 		<AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
 		<FileVersion>$(VersionPrefix)</FileVersion>
 		<PackageProjectUrl>https://github.com/takiru/Metroit.Win.GcSpread.MultiRow</PackageProjectUrl>
