@@ -67,13 +67,13 @@ namespace Metroit.Win.GcSpread.MultiRow.Test
 
         private void button3_Click(object sender, EventArgs e)
         {
-            var record = _list[_multiRowSheet.GetItemIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
+            var record = _list[_multiRowSheet.GetRecordIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
             MessageBox.Show($"{record}");
         }
 
         private void button5_Click(object sender, EventArgs e)
         {
-            var record = _list[_multiRowSheet.GetItemIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
+            var record = _list[_multiRowSheet.GetRecordIndex(fpSpread1.ActiveSheet.ActiveRowIndex)];
             MessageBox.Show($"{record.State}");
         }
 

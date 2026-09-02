@@ -35,12 +35,12 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// 1レコード分の行の追加が行われた時、1レコード分の行のセットアップ制御を取得します。
         /// </summary>
-        public RowSetupDelegate RowSetup => Configuration.RowSetup;
+        public RowSetup RowSetup => Configuration.RowSetup;
 
         /// <summary>
         /// 1レコード分の行の行の追加が行われた時、セルのセットアップ制御を取得します。
         /// </summary>
-        public CellSetupDelegate CellSetup => Configuration.CellSetup;
+        public CellSetup CellSetup => Configuration.CellSetup;
 
         /// <summary>
         /// タグの伝達制御を取得します。
@@ -75,13 +75,13 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の行インデックスから、<see cref="MultiRowAttribute"/>で指定された行インデックスを取得します。
+        /// 画面の行インデックスから、<see cref="MultiRowAttribute"/> で指定されている行インデックスを取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns><see cref="MultiRowAttribute"/>で指定された行インデックス。</returns>
-        public int GetAttributeRowIndex(int actualRowIndex)
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
+        /// <returns><see cref="MultiRowAttribute"/> で指定されている行インデックス。</returns>
+        public int GetAttributeRowIndex(int viewRowIndex)
         {
-            return actualRowIndex % RowsPerRecord;
+            return viewRowIndex % RowsPerRecord;
         }
 
         /// <summary>

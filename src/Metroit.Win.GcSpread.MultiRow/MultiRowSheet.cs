@@ -18,9 +18,9 @@ namespace Metroit.Win.GcSpread.MultiRow
     /// 行が追加されたとき、<see cref="Row.Tag"/>には行オブジェクトが設定されます。<br/>
     /// 必要なら<see cref="MultiRowSheetConfiguration{T}.TagDelivery"/>によってカスタマイズ可能です。
     /// </summary>
-    /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
+    /// <typeparam name="TRecord">状態を持つ変更追跡が可能なクラス。</typeparam>
     /// <remarks><see langword="null"/>が許容されるセルのときに、アイテムが<see langword="null"/>許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。</remarks>
-    public class MultiRowSheet<T> : IDisposable where T : IPropertyChangeTrackerProvider, IStateObject, new()
+    public class MultiRowSheet<TRecord> : IDisposable where TRecord : IPropertyChangeTrackerProvider, IStateObject, new()
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -30,12 +30,12 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// 構成情報を取得します。
         /// </summary>
-        public ReadOnlyMultiRowSheetConfiguration<T> Configuration { get; }
+        public ReadOnlyMultiRowSheetConfiguration<TRecord> Configuration { get; }
 
         /// <summary>
-        /// 行のコレクションを取得します。
+        /// レコードのリストを取得します。
         /// </summary>
-        public IReadOnlyList<T> Rows => _list;
+        public IReadOnlyList<TRecord> Rows => _list;
 
         /// <summary>
         /// 1レコードを複数行として扱う外観を提供します。
@@ -43,9 +43,14 @@ namespace Metroit.Win.GcSpread.MultiRow
         private IMultiRowSheetAppearance MultiRowSheetAppearance { get; }
 
         /// <summary>
+        /// 設定された構成情報。s
+        /// </summary>
+        private MultiRowSheetConfiguration<TRecord> _internalConfiguration { get; }
+
+        /// <summary>
         /// 1レコードを複数行として扱うリスト。
         /// </summary>
-        private TrackingList<T> _list;
+        private TrackingList<TRecord> _list;
 
         /// <summary>
         /// 構成情報によって<see cref="SheetView"/>を1レコード複数行の表現で扱えるようにします。<br/>
@@ -55,9 +60,9 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         /// <param name="configuration">構成情報。</param>
         /// <param name="list">取り扱うリスト。</param>
-        public static MultiRowSheet<T> Start(MultiRowSheetConfiguration<T> configuration, TrackingList<T> list)
+        public static MultiRowSheet<TRecord> Start(MultiRowSheetConfiguration<TRecord> configuration, TrackingList<TRecord> list)
         {
-            return new MultiRowSheet<T>(configuration, list);
+            return new MultiRowSheet<TRecord>(configuration, list);
         }
 
         /// <summary>
@@ -67,9 +72,10 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         /// <param name="configuration">構成情報。</param>
         /// <param name="list">取り扱うリスト。</param>
-        private MultiRowSheet(MultiRowSheetConfiguration<T> configuration, TrackingList<T> list)
+        private MultiRowSheet(MultiRowSheetConfiguration<TRecord> configuration, TrackingList<TRecord> list)
         {
-            Configuration = new ReadOnlyMultiRowSheetConfiguration<T>(configuration);
+            _internalConfiguration = configuration;
+            Configuration = new ReadOnlyMultiRowSheetConfiguration<TRecord>(configuration);
 
             Sheet.OperationMode = OperationMode.Normal;
 
@@ -107,89 +113,79 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の行インデックスから、UIレコードのインデックスを取得します。
+        /// 画面の行インデックスから画面の開始行インデックスを取得します。
         /// </summary>
-        /// <returns>UIレコードのインデックス。</returns>
-        public int GetUIRecordIndex(int actualRowIndex)
+        /// <returns>画面の開始行インデックス。</returns>
+        public int GetViewStartRowIndexFromViewRowIndex(int viewRowIndex)
         {
-            return actualRowIndex / Configuration.RowsPerRecord;
+            return viewRowIndex / Configuration.RowsPerRecord;
         }
 
         /// <summary>
-        /// UIレコードのインデックスから、そのレコードの実際の開始行インデックスを取得します。
+        /// レコードのインデックスから画面の開始行インデックスを取得します。
         /// </summary>
-        /// <returns>実際の開始行インデックス。</returns>
-        public int GetUIActualStartRowIndex(int uiRecordIndex)
+        /// <returns>画面の開始行インデックス。</returns>
+        public int GetViewStartRowIndexFromRecordIndex(int recordIndex)
         {
-            return uiRecordIndex * Configuration.RowsPerRecord;
+            return GetViewStartRowIndexFromRecord(Rows[recordIndex]);
         }
 
         /// <summary>
-        /// アイテムから実際の開始行インデックスを取得します。
+        /// レコードから画面の開始行インデックスを取得します。
         /// </summary>
-        /// <param name="item">アイテム。</param>
-        /// <returns>実際の行インデックス。</returns>
-        public int GetUIActualStartRowIndex(T item)
+        /// <param name="record">レコード。</param>
+        /// <returns>画面の開始行インデックス。</returns>
+        public int GetViewStartRowIndexFromRecord(TRecord record)
         {
-            return Sheet.RowHeader.Rows.Cast<Row>()
+            return Sheet.RowHeader.Rows
+                .OfType<Row>()
                 .Select((Value, Index) => new { Index, Value })
-                .Where(x => EqualityComparer<object>.Default.Equals(GetRowTag(x.Value), item))
-                .First()
+                .First(x => EqualityComparer<object>.Default.Equals(GetRowTag(x.Value), record))
                 .Index;
         }
 
         /// <summary>
-        /// 実際の行インデックスから、アイテムのインデックスを取得します。
+        /// 画面の行インデックスから、レコードのインデックスを取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns>アイテムのインデックス。</returns>
-        public int GetItemIndex(int actualRowIndex)
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
+        /// <returns>レコードのインデックス。</returns>
+        public int GetRecordIndex(int viewRowIndex)
         {
-            return _list.IndexOf(GetItem(actualRowIndex));
+            return _list.IndexOf(GetRecord(viewRowIndex));
         }
 
         /// <summary>
-        /// 実際の行インデックスからアイテムを取得します。
+        /// 画面の行インデックスからレコードを取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns>アイテム。</returns>
-        public T GetItem(int actualRowIndex)
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
+        /// <returns>レコード。</returns>
+        public TRecord GetRecord(int viewRowIndex)
         {
-            return GetRowTag(Sheet.RowHeader.Rows[actualRowIndex]);
+            return GetRowTag(Sheet.RowHeader.Rows[viewRowIndex]);
         }
 
         /// <summary>
-        /// UIレコードのインデックスからアイテムを取得します。
+        /// 画面の行インデックスから行番号を取得します。
         /// </summary>
-        /// <param name="uiRecordIndex">UIレコードのインデックス。</param>
-        /// <returns>アイテム。</returns>
-        public T GetItemByUIRecordIndex(int uiRecordIndex)
-        {
-            return GetItem(GetUIActualStartRowIndex(uiRecordIndex));
-        }
-
-        /// <summary>
-        /// 実際の行インデックスから行番号を取得します。
-        /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
         /// <returns>行番号。</returns>
-        public int GetRowNumber(int actualRowIndex)
+        public int GetRowNumber(int viewRowIndex)
         {
-            return Configuration.GetRowNumber(actualRowIndex);
+            return Configuration.GetRowNumber(viewRowIndex);
         }
 
         /// <summary>
-        /// 実際の行インデックスから、<see cref="MultiRowAttribute"/>で指定された行インデックスを取得します。
+        /// 画面の行インデックスから、<see cref="MultiRowAttribute"/> で指定されている行インデックスを取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
-        /// <returns><see cref="MultiRowAttribute"/>で指定された行インデックス。</returns>
-        public int GetAttributeRowIndex(int actualRowIndex)
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
+        /// <returns><see cref="MultiRowAttribute"/> で指定されている行インデックス。</returns>
+        public int GetAttributeRowIndex(int viewRowIndex)
         {
-            return Configuration.GetAttributeRowIndex(actualRowIndex);
+            return Configuration.GetAttributeRowIndex(viewRowIndex);
         }
 
         /// <summary>
-        /// 行番号を数値から行を表現するアルファベットに変換します。
+        /// 行番号から、行を表現するアルファベットに変換します。
         /// </summary>
         /// <param name="rowNumber">行番号。</param>
         /// <returns>行を表現するアルファベット。</returns>
@@ -257,12 +253,12 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 指定したUIレコードを選択します。
+        /// レコードのインデックスに該当する画面の行を選択状態にします。
         /// </summary>
         /// <param name="recordIndex">レコードのインデックス。</param>
-        private void SelectUIRecord(int recordIndex)
+        private void SelectViewRows(int recordIndex)
         {
-            var actualStartRow = GetUIActualStartRowIndex(recordIndex);
+            var actualStartRow = GetViewStartRowIndexFromRecordIndex(recordIndex);
             Sheet.SetActiveCell(actualStartRow, -1, true);
             Sheet.AddSelection(actualStartRow, -1, Configuration.RowsPerRecord, -1);
         }
@@ -303,11 +299,6 @@ namespace Metroit.Win.GcSpread.MultiRow
             {
                 _isRowDragging = true;
             }
-
-            if (!_isRowDragging)
-            {
-                return;
-            }
         }
 
         /// <summary>
@@ -336,7 +327,7 @@ namespace Metroit.Win.GcSpread.MultiRow
             }
 
             _actionBeginOperation = ActionBeginOperation.ActualCell;
-            var item = GetItem(e.Row);
+            var item = GetRecord(e.Row);
 
             var rowType = item.GetType();
 
@@ -469,7 +460,7 @@ namespace Metroit.Win.GcSpread.MultiRow
             _mouseDownRow = hitTest.HeaderInfo.Row;
             _isRowDragging = false;
 
-            int clickedRecordIndex = GetUIRecordIndex(_mouseDownRow);
+            int clickedRecordIndex = GetViewStartRowIndexFromViewRowIndex(_mouseDownRow);
 
             var delayedSelectRecordTask = new Task(() =>
             {
@@ -477,12 +468,12 @@ namespace Metroit.Win.GcSpread.MultiRow
                 {
                     Sheet.FpSpread.Invoke(new System.Action(() =>
                     {
-                        SelectUIRecord(clickedRecordIndex);
+                        SelectViewRows(clickedRecordIndex);
                     }));
                 }
                 else
                 {
-                    SelectUIRecord(clickedRecordIndex);
+                    SelectViewRows(clickedRecordIndex);
                 }
             });
 
@@ -503,7 +494,7 @@ namespace Metroit.Win.GcSpread.MultiRow
             }
 
             // 通常のクリック：1レコードを選択
-            SelectUIRecord(clickedRecordIndex);
+            SelectViewRows(clickedRecordIndex);
         }
 
         /// <summary>
@@ -556,7 +547,7 @@ namespace Metroit.Win.GcSpread.MultiRow
 
                 case ListChangedType.ItemDeleted:
                     // Remove(), RemoveAt(), CancelNew() で走行する
-                    RemoveActualRow();
+                    RemoveViewRow();
                     break;
             }
         }
@@ -591,12 +582,12 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// シートに実際の行を追加する。
         /// </summary>
         /// <param name="item">追加された行のアイテム。</param>
-        private void AddActualRow(T item)
+        private void AddActualRow(TRecord item)
         {
-            var addingRowIndex = Sheet.Rows.Count;
-            Sheet.Rows.Add(addingRowIndex, Configuration.RowsPerRecord);
+            var addingViewStartRowIndex = Sheet.Rows.Count;
+            Sheet.Rows.Add(addingViewStartRowIndex, Configuration.RowsPerRecord);
             var addedRows = new List<Row>();
-            for (var i = addingRowIndex; i < addingRowIndex + Configuration.RowsPerRecord; i++)
+            for (var i = addingViewStartRowIndex; i < addingViewStartRowIndex + Configuration.RowsPerRecord; i++)
             {
                 addedRows.Add(Sheet.Rows[i]);
             }
@@ -608,17 +599,17 @@ namespace Metroit.Win.GcSpread.MultiRow
             }
             if (Configuration.RowSetup != null)
             {
-                Configuration.RowSetup.Invoke(addingRowIndex, addedRows);
+                Configuration.RowSetup.Invoke(addingViewStartRowIndex, addedRows);
             }
 
             // 行ヘッダーの結合、行番号の割当と行の背景色を変更する
-            DrawRowAppearance(addingRowIndex);
+            DrawRowAppearance(addingViewStartRowIndex);
 
             // 追加されたすべての行の Tag に、行オブジェクトを設定し、セルセットアップを実施する
-            var actualEndRowIndex = Sheet.Rows.Count - 1;
-            for (var actualRowIndex = addingRowIndex; actualRowIndex <= actualEndRowIndex; actualRowIndex++)
+            var viewEndRowIndex = Sheet.Rows.Count - 1;
+            for (var viewRowIndex = addingViewStartRowIndex; viewRowIndex <= viewEndRowIndex; viewRowIndex++)
             {
-                SetRowTag(Sheet.RowHeader.Rows[actualRowIndex], item);
+                SetRowTag(Sheet.RowHeader.Rows[viewRowIndex], item);
 
                 if (Configuration.CellSetup == null)
                 {
@@ -627,9 +618,11 @@ namespace Metroit.Win.GcSpread.MultiRow
 
                 for (var columnIndex = 0; columnIndex < Sheet.Columns.Count; columnIndex++)
                 {
-                    Configuration.CellSetup.Invoke(GetAttributeRowIndex(actualRowIndex), Sheet.Cells[actualRowIndex, columnIndex]);
+                    Configuration.CellSetup.Invoke(GetAttributeRowIndex(viewRowIndex), Sheet.Cells[viewRowIndex, columnIndex]);
                 }
             }
+
+            _internalConfiguration.NotifyRowAdded(new RowAddedEventArgs(addingViewStartRowIndex, addedRows));
         }
 
         /// <summary>
@@ -637,7 +630,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         /// <param name="row">行オブジェクト。</param>
         /// <param name="item">タグへの設定情報。</param>
-        private void SetRowTag(Row row, T item)
+        private void SetRowTag(Row row, TRecord item)
         {
             if (Configuration.TagDelivery == null)
             {
@@ -653,11 +646,11 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// </summary>
         /// <param name="row">行オブジェクト。</param>
         /// <returns>タグの設定情報。</returns>
-        private T GetRowTag(Row row)
+        private TRecord GetRowTag(Row row)
         {
             if (Configuration.TagDelivery == null)
             {
-                return (T)row.Tag;
+                return (TRecord)row.Tag;
             }
 
             return Configuration.TagDelivery.GetTag.Invoke(row.Tag);
@@ -675,9 +668,9 @@ namespace Metroit.Win.GcSpread.MultiRow
                 _actionBeginOperation = ActionBeginOperation.Item;
 
                 // 直前で変更されたプロパティの値を実際のセルへ反映する
-                var pi = _list[rowIndex].GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
-                    .Where(x => x.Name == _list[rowIndex].ChangeTracker.LastTrackingProperty)
-                    .Single();
+                var pi = _list[rowIndex].GetType()
+                    .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
+                    .Single(x => x.Name == _list[rowIndex].ChangeTracker.LastTrackingProperty);
                 ReactiveCellValue(_list[rowIndex], pi);
             }
 
@@ -687,9 +680,9 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// 変更された値をシートのセルへ反映します。
         /// </summary>
-        /// <param name="item">値変更が行われた行オブジェクト。</param>
+        /// <param name="record">値変更が行われた行オブジェクト。</param>
         /// <param name="pi">値変更が行われた行オブジェクトの PropertyInfo。</param>
-        private void ReactiveCellValue(T item, PropertyInfo pi)
+        private void ReactiveCellValue(TRecord record, PropertyInfo pi)
         {
             var attr = pi.GetCustomAttribute(typeof(MultiRowAttribute)) as MultiRowAttribute;
             if (attr == null)
@@ -698,10 +691,10 @@ namespace Metroit.Win.GcSpread.MultiRow
             }
 
             // 同一オブジェクトを保有する、最も早く出現する行オブジェクトを基準として値設定を行う
-            var actualStartRow = Sheet.RowHeader.Rows.Cast<Row>()
-                .Where(x => EqualityComparer<object>.Default.Equals(GetRowTag(x), item))
-                .First();
-            Sheet.Cells[actualStartRow.Index + attr.Row, attr.Column].Value = pi.GetValue(item);
+            var actualStartRow = Sheet.RowHeader.Rows
+                .OfType<Row>()
+                .First(x => EqualityComparer<object>.Default.Equals(GetRowTag(x), record));
+            Sheet.Cells[actualStartRow.Index + attr.Row, attr.Column].Value = pi.GetValue(record);
         }
 
         /// <summary>
@@ -713,39 +706,43 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の行を削除する。
+        /// 画面の行を削除する。
         /// </summary>
-        private void RemoveActualRow()
+        private void RemoveViewRow()
         {
-            var actualStartRowIndex = GetUIActualStartRowIndex(_list.LastAccessItem);
-            Sheet.Rows.Remove(actualStartRowIndex, Configuration.RowsPerRecord);
-            ReDrawRowAppearance(actualStartRowIndex);
+            var viewStartRowIndex = GetViewStartRowIndexFromRecord(_list.LastAccessItem);
+            Sheet.Rows.Remove(viewStartRowIndex, Configuration.RowsPerRecord);
+            ReDrawRowAppearance(viewStartRowIndex);
+
+            _internalConfiguration.NotifyRowRemoved(new RowRemovedEventArgs(viewStartRowIndex, viewStartRowIndex + Configuration.RowsPerRecord - 1));
         }
 
         /// <summary>
-        /// <paramref name="actualStartRowIndex"/> を含む下の行を描画し直す。
+        /// <paramref name="viewStartRowIndex"/> を含む下の行を描画し直す。
         /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void ReDrawRowAppearance(int actualStartRowIndex)
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
+        private void ReDrawRowAppearance(int viewStartRowIndex)
         {
-            foreach (var row in Sheet.Rows.Cast<Row>()
+            foreach (var row in Sheet.Rows
+                .OfType<Row>()
                 .Select((Row, Index) => new { Row, Index })
-                .Where(x => x.Index >= actualStartRowIndex && GetAttributeRowIndex(x.Index) == 0))
+                .Where(x => x.Index >= viewStartRowIndex && GetAttributeRowIndex(x.Index) == 0))
             {
                 DrawRowAppearance(row.Index);
             }
         }
 
         /// <summary>
-        /// <paramref name="fromIndex"/>から<paramref name="toIndex"/>に含まれる行を描画し直す。
+        /// <paramref name="viewStartRowIndex"/> から <paramref name="viewEndRowIndex"/> に含まれる行を描画し直す。
         /// </summary>
-        /// <param name="fromIndex">1レコードの実際の開始行インデックス。</param>
-        /// <param name="toIndex">1レコードの実際の終了行インデックス。</param>
-        private void ReDrawRowAppearance(int fromIndex, int toIndex)
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
+        /// <param name="viewEndRowIndex">画面の終了行インデックス。</param>
+        private void ReDrawRowAppearance(int viewStartRowIndex, int viewEndRowIndex)
         {
-            foreach (var row in Sheet.Rows.Cast<Row>()
+            foreach (var row in Sheet.Rows
+                .OfType<Row>()
                 .Select((Row, Index) => new { Row, Index })
-                .Where(x => x.Index >= fromIndex && x.Index <= toIndex && GetAttributeRowIndex(x.Index) == 0))
+                .Where(x => x.Index >= viewStartRowIndex && x.Index <= viewEndRowIndex && GetAttributeRowIndex(x.Index) == 0))
             {
                 DrawRowAppearance(row.Index);
             }
@@ -754,27 +751,27 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// 行ヘッダーのセル結合、行番号の設定、背景色の設定を行う。
         /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void DrawRowAppearance(int actualStartRowIndex)
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
+        private void DrawRowAppearance(int viewStartRowIndex)
         {
-            MergeRowNumberCell(actualStartRowIndex);
-            SetRowNumber(actualStartRowIndex);
+            MergeRowNumberCell(viewStartRowIndex);
+            SetRowNumber(viewStartRowIndex);
         }
 
         /// <summary>
         /// 行番号を表現する行ヘッダーセルを結合する。
         /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void MergeRowNumberCell(int actualStartRowIndex)
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
+        private void MergeRowNumberCell(int viewStartRowIndex)
         {
-            Sheet.AddRowHeaderSpanCell(actualStartRowIndex, GetRowNumberColumnIndex(), Configuration.RowsPerRecord, 1);
+            Sheet.AddRowHeaderSpanCell(viewStartRowIndex, GetAutoTextIndex(), Configuration.RowsPerRecord, 1);
         }
 
         /// <summary>
         /// 1レコードの行ヘッダーに表示する行番号を設定する。
         /// </summary>
-        /// <param name="actualStartRowIndex">1レコードの実際の開始行インデックス。</param>
-        private void SetRowNumber(int actualStartRowIndex)
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
+        private void SetRowNumber(int viewStartRowIndex)
         {
             // 行ヘッダーがない場合は何もしない
             if (Sheet.RowHeader.Columns.Count == 0)
@@ -788,11 +785,11 @@ namespace Metroit.Win.GcSpread.MultiRow
                 return;
             }
 
-            var rowNumber = GetRowNumber(actualStartRowIndex);
-            var actualEndRowIndex = GetActualEndRowIndex(actualStartRowIndex);
+            var rowNumber = GetRowNumber(viewStartRowIndex);
+            var actualEndRowIndex = GetViewEndRowIndex(viewStartRowIndex);
 
-            var rowNumberColumnIndex = GetRowNumberColumnIndex();
-            for (var i = actualStartRowIndex; i <= actualEndRowIndex; i++)
+            var rowNumberColumnIndex = GetAutoTextIndex();
+            for (var i = viewStartRowIndex; i <= actualEndRowIndex; i++)
             {
                 if (Sheet.RowHeader.AutoText == HeaderAutoText.Numbers)
                 {
@@ -807,28 +804,28 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の開始行インデックスから、実際の終了行インデックスを取得します。
+        /// 画面の開始行インデックスから、画面の終了行インデックスを取得します。
         /// </summary>
-        /// <param name="actualStartRowIndex">実際の開始行インデックス。</param>
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
         /// <returns></returns>
-        private int GetActualEndRowIndex(int actualStartRowIndex)
+        private int GetViewEndRowIndex(int viewStartRowIndex)
         {
-            return Configuration.GetActualEndRowIndex(actualStartRowIndex);
+            return Configuration.GetActualEndRowIndex(viewStartRowIndex);
         }
 
         /// <summary>
         /// 行番号を表現する列のインデックスを取得します。
         /// </summary>
         /// <returns>行番号を表現する列のインデックス。</returns>
-        private int GetRowNumberColumnIndex()
+        private int GetAutoTextIndex()
         {
-            var rowNumberColumn = Sheet.RowHeader.AutoTextIndex;
-            if (rowNumberColumn == -1)
+            var index = Sheet.RowHeader.AutoTextIndex;
+            if (index == -1)
             {
-                rowNumberColumn = Sheet.RowHeader.ColumnCount - 1;
+                index = Sheet.RowHeader.ColumnCount - 1;
             }
 
-            return rowNumberColumn;
+            return index;
         }
 
         /// <summary>

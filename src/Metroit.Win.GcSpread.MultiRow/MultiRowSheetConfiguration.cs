@@ -34,17 +34,27 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// 1レコード分の行の追加が行われた時、1レコード分の行のセットアップ制御を取得または設定します。
         /// </summary>
-        public RowSetupDelegate RowSetup { get; set; } = null;
+        public RowSetup RowSetup { get; set; } = null;
 
         /// <summary>
         /// 1レコード分の行の行の追加が行われた時、セルのセットアップ制御を取得または設定します。
         /// </summary>
-        public CellSetupDelegate CellSetup { get; set; } = null;
+        public CellSetup CellSetup { get; set; } = null;
 
         /// <summary>
         /// タグの伝達制御を取得または設定します。
         /// </summary>
         public RowTagDelivery<T> TagDelivery { get; set; } = null;
+
+        /// <summary>
+        /// 行が追加されたときに発生します。
+        /// </summary>
+        public event RowAddedEventHandler RowAdded;
+
+        /// <summary>
+        /// 行が削除されたときに発生します。
+        /// </summary>
+        public event RowRemovedEventHandler RowRemoved;
 
         /// <summary>
         /// 新しいインスタンスを生成します。
@@ -66,6 +76,42 @@ namespace Metroit.Win.GcSpread.MultiRow
 
             Sheet = sheet;
             RowsPerRecord = rowsPerRecord;
+        }
+
+        /// <summary>
+        /// 行が追加されたときのイベントを発生させます。
+        /// </summary>
+        /// <param name="e">イベントデータ。</param>
+        protected virtual void OnRowAdded(RowAddedEventArgs e)
+        {
+            RowAdded?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// 行が追加されたことを通知します。
+        /// </summary>
+        /// <param name="e">イベントデータ。</param>
+        internal void NotifyRowAdded(RowAddedEventArgs e)
+        {
+            OnRowAdded(e);
+        }
+
+        /// <summary>
+        /// 行が削除されたときのイベントを発生させます。
+        /// </summary>
+        /// <param name="e">イベントデータ。</param>
+        protected virtual void OnRowRemoved(RowRemovedEventArgs e)
+        {
+            RowRemoved?.Invoke(this, e);
+        }
+
+        /// <summary>
+        /// 行が削除されたことを通知します。
+        /// </summary>
+        /// <param name="e">イベントデータ。</param>
+        internal void NotifyRowRemoved(RowRemovedEventArgs e)
+        {
+            OnRowRemoved(e);
         }
     }
 }
