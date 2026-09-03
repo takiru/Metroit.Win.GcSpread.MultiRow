@@ -8,8 +8,8 @@ namespace Metroit.Win.GcSpread.MultiRow
     /// <summary>
     /// 1レコードを複数行として扱うための構成情報を提供します。
     /// </summary>
-    /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    public class MultiRowSheetConfiguration<T> where T : IPropertyChangeTrackerProvider, IStateObject, new()
+    /// <typeparam name="TRecord">状態を持つ変更追跡が可能なクラス。</typeparam>
+    public class MultiRowSheetConfiguration<TRecord> where TRecord : IPropertyChangeTrackerProvider, IStateObject
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -44,7 +44,7 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// タグの伝達制御を取得または設定します。
         /// </summary>
-        public RowTagDelivery<T> TagDelivery { get; set; } = null;
+        public RowTagDelivery<TRecord> TagDelivery { get; set; } = null;
 
         /// <summary>
         /// 行が追加されたときに発生します。

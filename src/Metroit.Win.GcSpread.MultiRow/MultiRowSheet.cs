@@ -20,7 +20,7 @@ namespace Metroit.Win.GcSpread.MultiRow
     /// </summary>
     /// <typeparam name="TRecord">状態を持つ変更追跡が可能なクラス。</typeparam>
     /// <remarks><see langword="null"/>が許容されるセルのときに、アイテムが<see langword="null"/>許容型でない場合、セルの見た目とアイテムの値が一致しない可能性があります。</remarks>
-    public class MultiRowSheet<TRecord> : IDisposable where TRecord : IPropertyChangeTrackerProvider, IStateObject, new()
+    public class MultiRowSheet<TRecord> : IDisposable where TRecord : IPropertyChangeTrackerProvider, IStateObject
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -537,7 +537,7 @@ namespace Metroit.Win.GcSpread.MultiRow
 
                 case ListChangedType.ItemChanged:
                     // ResetItem(), INotifyPropertyChangedによって値変更が通知されたときに走行する
-                    ReactiveChangedRow(e.NewIndex);
+                    ReactiveChangedRow(e.NewIndex, e.PropertyDescriptor.Name);
                     break;
 
                 case ListChangedType.Reset:
@@ -559,12 +559,6 @@ namespace Metroit.Win.GcSpread.MultiRow
         private void ReactiveAddedRow(int rowIndex)
         {
             _actionBeginOperation = ActionBeginOperation.Item;
-
-            // 追跡されていない場合は、追跡を開始する
-            if (!_list.Last().ChangeTracker.IsTracking)
-            {
-                _list.Last().ChangeTracker.Reset();
-            }
 
             AddActualRow(_list[rowIndex]);
 
@@ -660,17 +654,18 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// 変更された行をリアクティブする。
         /// </summary>
         /// <param name="rowIndex">変更された行。</param>
-        private void ReactiveChangedRow(int rowIndex)
+        /// <param name="propertyName">変更があったプロパティ名。</param>
+        private void ReactiveChangedRow(int rowIndex, string propertyName)
         {
             // NOTE: Sheet_CellChanged から制御が移ったときは行わない
             if (_actionBeginOperation == ActionBeginOperation.None)
             {
                 _actionBeginOperation = ActionBeginOperation.Item;
 
-                // 直前で変更されたプロパティの値を実際のセルへ反映する
+                // 変更されたプロパティの値を実際のセルへ反映する
                 var pi = _list[rowIndex].GetType()
                     .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.GetProperty)
-                    .Single(x => x.Name == _list[rowIndex].ChangeTracker.LastTrackingProperty);
+                    .Single(x => x.Name == propertyName);
                 ReactiveCellValue(_list[rowIndex], pi);
             }
 

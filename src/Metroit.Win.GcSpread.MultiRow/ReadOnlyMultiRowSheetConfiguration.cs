@@ -9,8 +9,8 @@ namespace Metroit.Win.GcSpread.MultiRow
     /// <summary>
     /// 1レコードを複数行として扱うための構成情報を読み取り専用として提供します。
     /// </summary>
-    /// <typeparam name="T">状態を持つ変更追跡が可能なクラス。</typeparam>
-    public class ReadOnlyMultiRowSheetConfiguration<T> where T : IPropertyChangeTrackerProvider, IStateObject, new()
+    /// <typeparam name="TRecord">状態を持つ変更追跡が可能なクラス。</typeparam>
+    public class ReadOnlyMultiRowSheetConfiguration<TRecord> where TRecord : IPropertyChangeTrackerProvider, IStateObject
     {
         /// <summary>
         /// 扱っているシートを取得します。
@@ -45,16 +45,16 @@ namespace Metroit.Win.GcSpread.MultiRow
         /// <summary>
         /// タグの伝達制御を取得します。
         /// </summary>
-        public RowTagDelivery<T> TagDelivery => Configuration.TagDelivery;
+        public RowTagDelivery<TRecord> TagDelivery => Configuration.TagDelivery;
 
-        private MultiRowSheetConfiguration<T> Configuration { get; }
+        private MultiRowSheetConfiguration<TRecord> Configuration { get; }
 
         /// <summary>
         /// 新しいインスタンスを生成します。
         /// </summary>
         /// <param name="configuration">1レコードを複数行として扱うための構成情報。</param>
         /// <exception cref="ArgumentNullException"><paramref name="configuration"/>が<see langword="null"/>です。</exception>
-        public ReadOnlyMultiRowSheetConfiguration(MultiRowSheetConfiguration<T> configuration)
+        public ReadOnlyMultiRowSheetConfiguration(MultiRowSheetConfiguration<TRecord> configuration)
         {
             if (configuration == null)
             {
