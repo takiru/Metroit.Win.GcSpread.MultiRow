@@ -65,13 +65,13 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の行インデックスから行番号を取得します。
+        /// 画面の行インデックスから行番号を取得します。
         /// </summary>
-        /// <param name="actualRowIndex">実際の行インデックス。</param>
+        /// <param name="viewRowIndex">画面の行インデックス。</param>
         /// <returns>行番号。</returns>
-        public int GetRowNumber(int actualRowIndex)
+        public int GetRowNumber(int viewRowIndex)
         {
-            return actualRowIndex / RowsPerRecord + 1;
+            return viewRowIndex / RowsPerRecord + 1;
         }
 
         /// <summary>
@@ -85,13 +85,13 @@ namespace Metroit.Win.GcSpread.MultiRow
         }
 
         /// <summary>
-        /// 実際の開始行インデックスから、実際の終了行インデックスを取得します。
+        /// 画面の開始行インデックスから、画面の終了行インデックスを取得します。
         /// </summary>
-        /// <param name="actualStartRowIndex">実際の開始行インデックス。</param>
+        /// <param name="viewStartRowIndex">画面の開始行インデックス。</param>
         /// <returns></returns>
-        public int GetActualEndRowIndex(int actualStartRowIndex)
+        public int GetViewEndRowIndex(int viewStartRowIndex)
         {
-            return actualStartRowIndex + RowsPerRecord - 1;
+            return viewStartRowIndex + RowsPerRecord - 1;
         }
     }
 }

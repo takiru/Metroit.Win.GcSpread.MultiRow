@@ -18,6 +18,6 @@
         /// <summary>
         /// 実際のセルによる操作。
         /// </summary>
-        ActualCell
+        ViewCell
     }
 }
